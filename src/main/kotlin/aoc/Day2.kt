@@ -4,18 +4,16 @@ import aoc.Direction.*
 import java.io.File
 
 fun day2() {
-    File("data/2021/real/02_01.txt").readLines()
-        .map(Command::parse)
-        .fold(State(0, 0, 0), State::apply1)
-        .product
-        .let(::println)
-
-    File("data/2021/real/02_01.txt").readLines()
-        .map(Command::parse)
-        .fold(State(0, 0, 0), State::apply2)
-        .product
-        .let(::println)
+    perform(::task1)
+    perform(::task2)
 }
+
+private fun perform(transformer: (State, Command) -> State) =
+    File("data/2021/real/02_01.txt").readLines()
+        .map(Command::parse)
+        .fold(State(0, 0, 0), transformer)
+        .product
+        .let(::println)
 
 private data class State(
     val depth: Int,
@@ -23,21 +21,25 @@ private data class State(
     val aim: Int
 ) {
     val product get() = depth * x
-
-    fun apply1(command: Command) =
-        when (command.direction) {
-            forward -> State(depth, x + command.value, aim)
-            down -> State(depth + command.value, x, aim)
-            up -> State(depth - command.value, x, aim)
-        }
-
-    fun apply2(command: Command) =
-        when (command.direction) {
-            forward -> State(depth + command.value * aim, x + command.value, aim)
-            down -> State(depth, x, aim + command.value)
-            up -> State(depth, x, aim - command.value)
-        }
 }
+
+private fun task1(state: State, command: Command): State =
+    state.run {
+        when (command.direction) {
+            forward -> copy(x = x + command.value)
+            down -> copy(depth = depth + command.value)
+            up -> copy(depth = depth - command.value)
+        }
+    }
+
+private fun task2(state: State, command: Command): State =
+    state.run {
+        when (command.direction) {
+            forward -> copy(depth = depth + command.value * aim, x = x + command.value)
+            down -> copy(aim = aim + command.value)
+            up -> copy(aim = aim - command.value)
+        }
+    }
 
 @Suppress("EnumEntryName")
 private enum class Direction {

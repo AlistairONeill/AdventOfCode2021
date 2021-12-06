@@ -2,6 +2,6 @@ package aoc
 
 
 fun main() {
-    day5()
+    day6()
 }
 

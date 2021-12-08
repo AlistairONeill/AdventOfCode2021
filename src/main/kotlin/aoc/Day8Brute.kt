@@ -4,7 +4,7 @@ import aoc.DisplayCableIdentifier.*
 import aoc.DisplayDigit.*
 import java.io.File
 
-fun day8() =
+fun day8Brute() =
     File("data/2021/real/08_01.txt")
         .readLines()
         .map(::parse)
@@ -90,7 +90,7 @@ private fun parse(input: String): InputRow {
 private fun InputRow.solve(): Output = toSolve.map(allPotentialMappings.findActual(population))
 
 private fun List<PotentialMapping>.findActual(input: Set<Input>): (Input) -> DisplayDigit =
-    single { it.isSolutionFor(input) }.finalise()::apply
+    first { it.isSolutionFor(input) }.finalise()::apply
 
 private abstract class AbstractMapping(protected val data: Map<DisplayCableIdentifier, DisplayCableIdentifier>) {
     open fun apply(input: Input): DisplayDigit? = input.map{ data[it]!! }.toSet().toDisplayDigit()

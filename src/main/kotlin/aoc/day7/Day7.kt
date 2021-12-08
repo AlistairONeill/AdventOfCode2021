@@ -1,4 +1,4 @@
-package aoc
+package aoc.day7
 
 import java.io.File
 import java.util.Collections.max

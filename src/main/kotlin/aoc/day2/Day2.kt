@@ -1,6 +1,6 @@
-package aoc
+package aoc.day2
 
-import aoc.Direction.*
+import aoc.day2.Direction.*
 import java.io.File
 
 fun day2() {
@@ -10,7 +10,7 @@ fun day2() {
 
 private fun perform(transformer: (State, Command) -> State) =
     File("data/2021/real/02_01.txt").readLines()
-        .map(Command::parse)
+        .map(Command.Companion::parse)
         .fold(State(0, 0, 0), transformer)
         .product
         .let(::println)
@@ -54,7 +54,7 @@ private data class Command(
         fun parse(input: String): Command {
             val split = input.split(" ")
             return Command(
-                Direction.valueOf(split[0]),
+                valueOf(split[0]),
                 split[1].toInt()
             )
         }

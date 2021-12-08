@@ -1,4 +1,4 @@
-package aoc
+package aoc.day4
 
 import java.io.File
 
@@ -6,13 +6,13 @@ import java.io.File
 fun day4() {
     File("data/2021/real/04_01.txt")
         .readText()
-        .let(BingoGame::parse)
+        .let(BingoGame.Companion::parse)
         .runUntilWinner()
         .let(::println)
 
     File("data/2021/real/04_01.txt")
         .readText()
-        .let(BingoGame::parse)
+        .let(BingoGame.Companion::parse)
         .runUntilLastWinner()
         .let(::println)
 }
@@ -29,7 +29,7 @@ class BingoGame private constructor(private val input: List<Int>, private val bo
                             .split(",")
                             .map(String::toInt),
                         drop(1)
-                            .map(BingoBoard::parse)
+                            .map(BingoBoard.Companion::parse)
                             .toMutableList()
                     )
                 }
@@ -64,14 +64,14 @@ private class BingoBoard private constructor(private val data: List<List<BingoSl
         fun parse(input: String) =
             input
                 .split("\n")
-                .map(BingoBoard::parseRow)
+                .map(Companion::parseRow)
                 .let(::BingoBoard)
 
         private fun parseRow(input: String) =
             input
                 .split(" ")
                 .filter(String::isNotBlank)
-                .map(BingoSlot::parse)
+                .map(BingoSlot.Companion::parse)
     }
 
     private class BingoSlot(val value: Int) {
@@ -83,7 +83,7 @@ private class BingoBoard private constructor(private val data: List<List<BingoSl
         }
 
         companion object {
-            fun parse(input: String) = input.toInt().let(::BingoSlot)
+            fun parse(input: String) = input.toInt().let(BingoBoard::BingoSlot)
         }
     }
 

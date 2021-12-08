@@ -1,5 +1,6 @@
 package aoc
 
+import aoc.day8.day8Brute
 import java.time.Instant
 
 

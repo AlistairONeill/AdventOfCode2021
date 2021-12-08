@@ -1,4 +1,4 @@
-package aoc
+package aoc.day3
 
 import java.io.File
 import java.lang.RuntimeException

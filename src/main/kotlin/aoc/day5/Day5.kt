@@ -1,4 +1,4 @@
-package aoc
+package aoc.day5
 
 import java.io.File
 
@@ -10,7 +10,7 @@ fun day5() {
 private fun perform(filter: (HydrothermalLine) -> Boolean) =
     File("data/2021/real/05_01.txt")
         .readLines()
-        .map(HydrothermalLine::parse)
+        .map(HydrothermalLine.Companion::parse)
         .filter(filter)
         .flatMap(HydrothermalLine::points)
         .groupBy{ it }

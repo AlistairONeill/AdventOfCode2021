@@ -1,4 +1,4 @@
-package aoc
+package aoc.day6
 
 import java.io.File
 import java.math.BigInteger

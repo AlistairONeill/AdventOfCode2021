@@ -11,7 +11,7 @@ internal fun Solution.part2() = sumOf(List<DisplayDigit>::toInt)
 private typealias Solution = List<Output>
 internal data class InputRow(val population: InputPopulation, val toSolve: UnknownNumber)
 private typealias InputPopulation = Set<Input>
-private typealias UnknownNumber = List<Input>
+internal typealias UnknownNumber = List<Input>
 internal typealias Input = Set<DisplayCableIdentifier>
 internal typealias Output = List<DisplayDigit>
 
@@ -26,17 +26,31 @@ internal enum class DisplayDigit {
 
 internal val allDigits = DisplayDigit.values().toSet()
 
+internal val DisplayDigit.outputs get() =
+    when (this) {
+        ZERO -> setOf(a, b, c, e, f, g)
+        ONE -> setOf(c, f)
+        TWO -> setOf(a, c, d, e, g)
+        THREE -> setOf(a, c, d, f, g)
+        FOUR -> setOf(b, c, d, f)
+        FIVE -> setOf(a, b, d, f, g)
+        SIX -> setOf(a, b, d, e, f, g)
+        SEVEN -> setOf(a, c, f)
+        EIGHT -> setOf(a, b, c, d, e, f, g)
+        NINE -> setOf(a, b, c, d, f, g)
+    }
+
 private val outputToDigit = mapOf(
-    setOf(a, b, c, e, f, g) to ZERO,
-    setOf(c, f) to ONE,
-    setOf(a, c, d, e, g) to TWO,
-    setOf(a, c, d, f, g) to THREE,
-    setOf(b, c, d, f) to FOUR,
-    setOf(a, b, d, f, g) to FIVE,
-    setOf(a, b, d, e, f, g) to SIX,
-    setOf(a, c, f) to SEVEN,
-    setOf(a, b, c, d, e, f, g) to EIGHT,
-    setOf(a, b, c, d, f, g) to NINE
+    ZERO.outputs to ZERO,
+    ONE.outputs to ONE,
+    TWO.outputs to TWO,
+    THREE.outputs to THREE,
+    FOUR.outputs to FOUR,
+    FIVE.outputs to FIVE,
+    SIX.outputs to SIX,
+    SEVEN.outputs to SEVEN,
+    EIGHT.outputs to EIGHT,
+    NINE.outputs to NINE
 )
 
 internal fun Input.toDisplayDigit(): DisplayDigit? = outputToDigit[this]
@@ -58,3 +72,21 @@ private fun DisplayDigit.toInt(): Int =
         EIGHT -> 8
         NINE -> 9
     }
+
+private fun String.toInput() : Input =
+    toCharArray()
+        .map(Char::toString)
+        .map(DisplayCableIdentifier::valueOf)
+        .toSet()
+
+private fun String.toInputs(): List<Input> = split(" ").map(String::toInput)
+
+internal fun parse(input: String): InputRow {
+    val split = input.split(" | ")
+    return InputRow(split[0].toInputs().toSet(), split[1].toInputs())
+}
+
+internal class ActualMapping(data: Map<DisplayCableIdentifier, DisplayCableIdentifier>) :
+    AbstractMapping(data) {
+    override fun apply(input: Input) : DisplayDigit = super.apply(input)!!
+}

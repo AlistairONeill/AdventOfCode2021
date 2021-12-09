@@ -18,25 +18,12 @@ private val allPotentialMappings: List<PotentialMapping> = DisplayCableIdentifie
     DisplayCableIdentifier.values().zip(it)
 }.map(::PotentialMapping)
 
-private fun String.toInput() : Input =
-    toCharArray()
-        .map(Char::toString)
-        .map(DisplayCableIdentifier::valueOf)
-        .toSet()
-
-private fun String.toInputs(): List<Input> = split(" ").map(String::toInput)
-
-private fun parse(input: String): InputRow {
-    val split = input.split(" | ")
-    return InputRow(split[0].toInputs().toSet(), split[1].toInputs())
-}
-
 private fun InputRow.solve(): Output = toSolve.map(allPotentialMappings.findActual(population))
 
 private fun List<PotentialMapping>.findActual(input: Set<Input>): (Input) -> DisplayDigit =
     first { it.isSolutionFor(input) }.finalise()::apply
 
-private abstract class AbstractMapping(protected val data: Map<DisplayCableIdentifier, DisplayCableIdentifier>) {
+internal abstract class AbstractMapping(protected val data: Map<DisplayCableIdentifier, DisplayCableIdentifier>) {
     open fun apply(input: Input): DisplayDigit? = input.map{ data[it]!! }.toSet().toDisplayDigit()
 }
 
@@ -44,11 +31,6 @@ private class PotentialMapping(data: List<Pair<DisplayCableIdentifier, DisplayCa
     AbstractMapping(data.toMap()) {
     fun finalise() = ActualMapping(data)
     fun isSolutionFor(input: Set<Input>) : Boolean = input.mapNotNull(::apply).toSet() == allDigits
-}
-
-private class ActualMapping(data: Map<DisplayCableIdentifier, DisplayCableIdentifier>) :
-    AbstractMapping(data) {
-    override fun apply(input: Input) : DisplayDigit = super.apply(input)!!
 }
 
 private fun List<DisplayCableIdentifier>.toPermutations(): List<List<DisplayCableIdentifier>> =

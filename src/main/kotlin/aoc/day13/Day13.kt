@@ -5,7 +5,7 @@ import aoc.day13.Fold.Vertical
 import java.io.File
 
 fun day13() {
-    File("data/2021/test/13_01.txt")
+    File("data/2021/ante/13_01.txt")
         .readText()
         .parse()
         .run {
@@ -66,7 +66,7 @@ private fun applyFold(dots: Dots, fold: Fold): Dots =
 private fun Dots.print() =
     (0 .. maxOf { it.second }).forEach { y ->
         (0 .. maxOf { it.first }).forEach { x ->
-            if (x to y in this) print("#") else print(".")
+            if (x to y in this) print("#") else print(" ")
         }
         println()
     }

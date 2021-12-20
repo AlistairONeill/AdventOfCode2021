@@ -1,16 +1,19 @@
 package aoc.day03
 
-import java.io.File
+import aoc.AdventOfCodeDay
 import java.lang.RuntimeException
 
-fun day3() {
-    File("data/2021/real/03_01.txt")
-        .readLines()
-        .let(Collector::from)
-        .run {
-            println(powerConsumption)
-            println(lifeSupportRating)
-        }
+object Day3: AdventOfCodeDay {
+    override fun String.solve(): Pair<String, String> =
+        lines()
+            .let(Collector::from)
+            .run {
+                powerConsumption.toString() to lifeSupportRating.toString()
+            }
+
+    override val day = "03"
+    override val test = "198" to "230"
+    override val solution = "2967914" to "7041258"
 }
 
 private class Collector(private val lines: List<List<Boolean>>) {
@@ -50,9 +53,10 @@ private class Collector(private val lines: List<List<Boolean>>) {
     private val gamma get() = counts.indices.map(::mostCommon).decimal
     private val epsilon get() = counts.indices.map(::leastCommon).decimal
 
+    @Suppress("UNUSED_EXPRESSION")
     private fun applyFilter(predicate: Collector.(Int) -> Boolean, index : Int) : List<List<Boolean>> =
         lines.singleOrNull()?.let(::listOf)
-            ?: lines.filter { it[index] == predicate(index) }.let(::Collector).applyFilter(predicate, index+1)
+            ?: lines.filter { predicate(index) == it[index] }.let(::Collector).applyFilter(predicate, index+1)
 
     private val oxygenRating get() = applyFilter(Collector::mostCommon, 0).single().decimal
     private val co2Rating get() = applyFilter(Collector::leastCommon, 0).single().decimal

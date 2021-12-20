@@ -1,21 +1,24 @@
 package aoc.day05
 
-import java.io.File
+import aoc.AdventOfCodeDay
 
-fun day5() {
-    perform(HydrothermalLine::gridAligned)
-    perform { true }
+object Day5 : AdventOfCodeDay {
+    override fun String.solve(): Pair<String, String> =
+        lines()
+            .map(HydrothermalLine::parse)
+            .run { solve(HydrothermalLine::gridAligned) to solve { true } }
+
+    private fun List<HydrothermalLine>.solve(filter: (HydrothermalLine) -> Boolean) =
+        filter(filter)
+            .flatMap(HydrothermalLine::points)
+            .groupBy { it }
+            .count { (_, points) -> points.size > 1 }
+            .toString()
+
+    override val day = "05"
+    override val test = "5" to "12"
+    override val solution = "6461" to "18065"
 }
-
-private fun perform(filter: (HydrothermalLine) -> Boolean) =
-    File("data/2021/real/05_01.txt")
-        .readLines()
-        .map(HydrothermalLine.Companion::parse)
-        .filter(filter)
-        .flatMap(HydrothermalLine::points)
-        .groupBy{ it }
-        .count { (_, points) -> points.size > 1 }
-        .let(::println)
 
 private data class Point(val x: Int, val y: Int)
 

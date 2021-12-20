@@ -1,20 +1,22 @@
 package aoc.day19
 
+import aoc.AdventOfCodeDay
 import java.io.File
 import kotlin.math.abs
 
-fun day19() {
-    File("data/2021/real/19_01.txt")
-        .readText()
-        .let(ScannerSolver::parse)
-        .also(ScannerSolver::solve)
-        .run {
-            println(beacons.size)
+object Day19 : AdventOfCodeDay {
+    override fun String.solve(): Pair<String, String> =
+        let(ScannerSolver::parse)
+            .also(ScannerSolver::solve)
+            .run {
+                beacons.size.toString() to scanners.maxOf { s1 ->
+                    scanners.maxOf(s1::manhatten)
+                }.toString()
+            }
 
-            scanners.maxOf { s1 ->
-                scanners.maxOf(s1::manhatten)
-            }.let(::println)
-        }
+    override val day = "19"
+    override val test = "79" to "3621"
+    override val solution = "335" to "10864"
 }
 
 private class Scanner(

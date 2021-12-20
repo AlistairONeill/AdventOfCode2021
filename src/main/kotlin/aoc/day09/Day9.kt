@@ -1,6 +1,30 @@
 package aoc.day09
 
+import aoc.AdventOfCodeDay
 import java.io.File
+
+object Day9 : AdventOfCodeDay {
+    override fun String.solve(): Pair<String, String> =
+        lines()
+            .map { it.map(Char::digitToInt) }
+            .run { part1() to part2() }
+
+    override val day = "09"
+    override val test = "15" to "1134"
+    override val solution = "480" to "1045660"
+}
+
+private fun List<List<Int>>.part1() =
+    findLowPoints()
+        .sumOf(Int::inc)
+        .toString()
+
+private fun List<List<Int>>.part2() =
+    findBasinSizes()
+        .sortedDescending()
+        .take(3)
+        .reduce { a, b -> a*b }
+        .toString()
 
 fun day9() {
     File("data/2021/real/09_01.txt")

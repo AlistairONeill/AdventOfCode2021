@@ -1,25 +1,33 @@
 package aoc.day10
 
 
+import aoc.AdventOfCodeDay
 import aoc.day10.ChunkCharacter.Closer
 import aoc.day10.ChunkCharacter.Opener
-import java.io.File
 
-fun day10() {
-    File("data/2021/real/10_01.txt")
-        .readLines()
-        .map(::parse)
-        .run {
-            filterIsInstance<SyntaxError>()
-                .sumOf(SyntaxError::score)
-                .let(::println)
+object Day10 : AdventOfCodeDay {
+    override fun String.solve(): Pair<String, String> =
+        lines()
+            .map(::parse)
+            .run {
+                part1() to part2()
+            }
 
-            filterIsInstance<AutoCompletion>()
-                .map(AutoCompletion::score)
-                .median()
-                .let(::println)
-        }
+    override val day = "10"
+    override val test = "26397" to "288957"
+    override val solution = "323613" to "3103006161"
 }
+
+private fun List<ParseResult>.part1() =
+    filterIsInstance<SyntaxError>()
+        .sumOf(SyntaxError::score)
+        .toString()
+
+private fun List<ParseResult>.part2() =
+    filterIsInstance<AutoCompletion>()
+        .map(AutoCompletion::score)
+        .median()
+        .toString()
 
 private sealed interface ChunkCharacter {
     enum class Opener(val closer: Closer): ChunkCharacter {

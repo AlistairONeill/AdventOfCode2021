@@ -1,8 +1,26 @@
 package aoc.day12
 
+import aoc.AdventOfCodeDay
 import aoc.day12.CaveId.Companion.END
 import aoc.day12.CaveId.Companion.START
 import java.io.File
+import kotlin.math.max
+
+object Day12 : AdventOfCodeDay {
+    override fun String.solve(): Pair<String, String> =
+        solve(0) to solve(1)
+
+    private fun String.solve(maxSmallRevisits: Int): String =
+        RouteSolver(this, maxSmallRevisits)
+            .getAllRoutes()
+            .size
+            .toString()
+
+    override val day = "12"
+    override val test = "226" to "3509"
+    override val solution = "4241" to "122134"
+}
+
 
 fun day12() {
     File("data/2021/real/12_01.txt")

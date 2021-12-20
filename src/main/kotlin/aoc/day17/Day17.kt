@@ -1,15 +1,18 @@
 package aoc.day17
 
+import aoc.AdventOfCodeDay
 import java.io.File
 
-fun day17() {
-    File("data/2021/real/17_01.txt")
-        .readText()
-        .let(TargetRange.Companion::parse)
-        .run {
-            part1().let(::println)
-            part2().let(::println)
-        }
+object Day17: AdventOfCodeDay {
+    override fun String.solve(): Pair<String, String> =
+        let(TargetRange::parse)
+            .run {
+                part1().toString() to part2().toString()
+            }
+
+    override val day = "17"
+    override val test = "45" to "112"
+    override val solution = "5565" to "2118"
 }
 
 private fun TargetRange.part1() = startY * (startY+1) / 2

@@ -1,17 +1,22 @@
 package aoc.day13
 
+import aoc.AdventOfCodeDay
 import aoc.day13.Fold.Horizontal
 import aoc.day13.Fold.Vertical
 import java.io.File
 
-fun day13() {
-    File("data/2021/ante/13_01.txt")
-        .readText()
-        .parse()
-        .run {
-            part1().size.let(::println)
-            part2().print()
-        }
+object Day13 : AdventOfCodeDay {
+    override fun String.solve(): Pair<String, String> =
+        parse()
+            .run {
+                part2()//.print()
+                part1().size.toString() to ""
+            }
+
+    override val day = "13"
+    override val test = "17" to ""
+    override val solution = "770" to ""
+
 }
 
 private typealias Dots = Set<Pair<Int, Int>>

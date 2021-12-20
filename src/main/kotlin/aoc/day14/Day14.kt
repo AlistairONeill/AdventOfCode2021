@@ -1,18 +1,23 @@
 package aoc.day14
 
-import java.io.File
+import aoc.AdventOfCodeDay
 
-fun day14() {
-    File("data/2021/real/14_01.txt")
-        .readText()
-        .let(::PolymerisationSimulator)
-        .run {
-            getFinalCounts(40)
-                .run {
-                    maxOf { it } - minOf { it }
-                }.let(::println)
+object Day14 : AdventOfCodeDay {
+    override fun String.solve(): Pair<String, String> =
+        let(::PolymerisationSimulator)
+            .run {
+                solve(10) to solve(40)
+            }
 
-        }
+    private fun PolymerisationSimulator.solve(steps: Int) =
+        getFinalCounts(steps)
+            .run {
+                maxOf { it } - minOf { it }
+            }.toString()
+
+    override val day = "14"
+    override val test = "1588" to "2188189693529"
+    override val solution = "3009" to "3459822539451"
 }
 
 class PolymerisationSimulator(
@@ -69,8 +74,6 @@ class PolymerisationSimulator(
                     counts,
                     dupe
                 )
-            }.also {
-                println(it)
             }
             .values
 }

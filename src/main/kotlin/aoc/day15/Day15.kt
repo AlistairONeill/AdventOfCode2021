@@ -1,27 +1,26 @@
 package aoc.day15
 
+import aoc.AdventOfCodeDay
 import java.io.File
 import kotlin.Int.Companion.MAX_VALUE
 
-fun day15() {
-    File("data/2021/real/15_01.txt")
-        .readText()
-        .run {
-            part1()
-            part2()
-        }
+object Day15: AdventOfCodeDay {
+    override fun String.solve(): Pair<String, String> = part1() to part2()
 
+    override val day = "15"
+    override val test = "40" to "315"
+    override val solution = "487" to "2821"
 }
 
 private fun String.part1() =
     RouteSolver(this, 1)
         .solve()
-        .let(::println)
+        .toString()
 
 private fun String.part2() =
     RouteSolver(this, 5)
         .solve()
-        .let(::println)
+        .toString()
 
 private class RouteSolver(input: String, copies: Int) {
     private inner class RouteNode(

@@ -1,8 +1,24 @@
 package aoc.day06
 
+import aoc.AdventOfCodeDay
 import java.io.File
 import java.math.BigInteger
 import java.math.BigInteger.ZERO
+
+object Day6: AdventOfCodeDay {
+    override fun String.solve(): Pair<String, String> {
+        val simulator = parse()
+        simulator.simulate(80)
+        val part1 = simulator.population
+        simulator.simulate(256 - 80)
+        val part2 = simulator.population
+        return part1.toString() to part2.toString()
+    }
+
+    override val day = "06"
+    override val test = "5934" to "26984457539"
+    override val solution = "387413" to "1738377086345"
+}
 
 fun day6() {
     File("data/2021/real/06_01.txt")

@@ -1,23 +1,20 @@
 package aoc.day04
 
-import java.io.File
+import aoc.AdventOfCodeDay
 
+object Day4: AdventOfCodeDay {
+    override fun String.solve(): Pair<String, String> =
+        solve(BingoGame::runUntilWinner) to solve(BingoGame::runUntilLastWinner)
 
-fun day4() {
-    File("data/2021/real/04_01.txt")
-        .readText()
-        .let(BingoGame.Companion::parse)
-        .runUntilWinner()
-        .let(::println)
+    private fun String.solve(fn: BingoGame.() -> Int) : String =
+        let(BingoGame.Companion::parse)
+            .fn()
+            .toString()
 
-    File("data/2021/real/04_01.txt")
-        .readText()
-        .let(BingoGame.Companion::parse)
-        .runUntilLastWinner()
-        .let(::println)
+    override val day = "04"
+    override val test = "4512" to "1924"
+    override val solution = "69579" to "14877"
 }
-
-
 
 class BingoGame private constructor(private val input: List<Int>, private val boards: MutableList<BingoBoard>) {
     companion object {

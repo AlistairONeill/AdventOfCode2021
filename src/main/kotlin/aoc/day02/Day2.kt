@@ -1,19 +1,25 @@
 package aoc.day02
 
+import aoc.AdventOfCodeDay
 import aoc.day02.Direction.*
-import java.io.File
 
-fun day2() {
-    perform(::task1)
-    perform(::task2)
+object Day2: AdventOfCodeDay {
+    override fun String.solve() =
+        lines()
+            .map(Command.Companion::parse)
+            .run {
+                solve(::task1) to solve(::task2)
+            }
+
+    private fun List<Command>.solve(transformer: (State, Command) -> State): String =
+        fold(State(0, 0, 0), transformer)
+            .product
+            .toString()
+
+    override val day = "02"
+    override val test = "150" to "900"
+    override val solution = "1488669" to "1176514794"
 }
-
-private fun perform(transformer: (State, Command) -> State) =
-    File("data/2021/real/02_01.txt").readLines()
-        .map(Command.Companion::parse)
-        .fold(State(0, 0, 0), transformer)
-        .product
-        .let(::println)
 
 private data class State(
     val depth: Int,

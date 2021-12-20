@@ -1,34 +1,24 @@
 package aoc.day16
 
+import aoc.AdventOfCodeDay
 import aoc.day16.Operation.*
 import aoc.day16.Packet.Container
 import aoc.day16.Packet.Literal
-import java.io.File
 
-fun day16() {
-    part1()
-    part2()
+object Day16: AdventOfCodeDay {
+    override fun String.solve(): Pair<String, String> =
+        asSequence()
+            .flatMap(::toBits)
+            .iterator()
+            .readPacket()
+            .run {
+                sumVersions().toString() to calculate().toString()
+            }
+
+    override val day = "16"
+    override val test = "16" to "15"
+    override val solution = "886" to "184487454837"
 }
-
-private fun part1() =
-    File("data/2021/real/16_01.txt")
-        .readText()
-        .asSequence()
-        .flatMap(::toBits)
-        .iterator()
-        .readPacket()
-        .sumVersions()
-        .let(::println)
-
-private fun part2() =
-    File("data/2021/real/16_01.txt")
-        .readText()
-        .asSequence()
-        .flatMap(::toBits)
-        .iterator()
-        .readPacket()
-        .calculate()
-        .let(::println)
 
 private fun toBits(char: Char): Sequence<Boolean> =
     when (char) {

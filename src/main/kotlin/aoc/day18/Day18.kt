@@ -1,29 +1,30 @@
 package aoc.day18
 
 
+import aoc.AdventOfCodeDay
 import aoc.day18.SnailNumber.SnailLiteral
 import aoc.day18.SnailNumber.SnailPair
 import java.io.File
 
-fun day18() {
-    File("data/2021/real/18_01.txt")
-        .readLines()
-        .run {
-            part1()
-            part2()
-        }
+object Day18 : AdventOfCodeDay {
+    override fun String.solve(): Pair<String, String> =
+        lines().run { part1() to part2() }
+
+    override val day = "18"
+    override val test = "4140" to "3993"
+    override val solution = "4033" to "4864"
 }
 
 private fun List<String>.part1() =
     map(SnailNumber::parse)
         .reduce(SnailNumber::plus)
         .magnitude
-        .let(::println)
+        .toString()
 
 private fun List<String>.part2() =
     flatMap { a -> map { b -> a to b } }
         .maxOf { (a, b) -> SnailNumber.parse(a).plus(SnailNumber.parse(b)).magnitude }
-        .let(::println)
+        .toString()
 
 private sealed interface SnailNumber {
     companion object {

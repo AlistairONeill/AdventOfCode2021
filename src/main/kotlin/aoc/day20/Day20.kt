@@ -1,19 +1,22 @@
 package aoc.day20
 
-import java.io.File
+import aoc.AdventOfCodeDay
 
-fun day20() {
-    File("data/2021/real/20_01.txt")
-        .readText()
-        .let(String::parse)
-        .let { (algo, start) ->
-            var state = start
-            repeat(2) { state = state.apply(algo) }
-            println(state.lit)
-            repeat(48) { state = state.apply(algo) }
-            println(state.lit)
-        }
+object Day20 : AdventOfCodeDay {
+    override fun String.solve(): Pair<String, String> =
+        let(String::parse)
+            .let { (algo, start) ->
+                var state = start
+                repeat(2) { state = state.apply(algo) }
+                val part1 = state.lit.toString()
+                repeat(48) { state = state.apply(algo) }
+                val part2 = state.lit.toString()
+                return part1 to part2
+            }
 
+    override val day = "20"
+    override val test = "35" to "3351"
+    override val solution = "5486" to "20210"
 }
 
 private fun String.parse(): Pair<Algorithm, State> =

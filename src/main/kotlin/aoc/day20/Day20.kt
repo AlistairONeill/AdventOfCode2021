@@ -7,15 +7,11 @@ fun day20() {
         .readText()
         .let(String::parse)
         .let { (algo, start) ->
-            (0 until 2)
-                .fold(start) { acc, _ -> acc.apply(algo) }
-                .lit
-                .let(::println)
-
-            (0 until 50)
-                .fold(start) { acc, _ -> acc.apply(algo) }
-                .lit
-                .let(::println)
+            var state = start
+            repeat(2) { state = state.apply(algo) }
+            println(state.lit)
+            repeat(48) { state = state.apply(algo) }
+            println(state.lit)
         }
 
 }
@@ -32,6 +28,15 @@ private class Algorithm(private val data: List<Boolean>) {
     }
 
     private val cache = mutableMapOf<List<Boolean>, Boolean>()
+
+    fun get(index: Int) = data[index]
+
+    fun handleVoid(void: Boolean) =
+        if (void) {
+            data.last()
+        } else {
+            data.first()
+        }
 
     fun get(signature: List<Boolean>): Boolean =
         cache[signature]
@@ -72,23 +77,32 @@ private data class State(
 
 
     fun apply(algo: Algorithm): State {
+        var i: Int
         val newData = (-1 .. height).map { y ->
             (-1 .. width).map { x ->
-                listOf(
-                    get(x-1, y-1),
-                    get(x, y-1),
-                    get(x+1, y-1),
-                    get(x-1, y),
-                    get(x, y),
-                    get(x+1, y),
-                    get(x-1, y+1),
-                    get(x, y+1),
-                    get(x+1, y+1)
-                ).let(algo::get)
+                i = 0
+                if (get(x-1, y-1)) i+=1
+                i*=2
+                if (get(x, y-1)) i+=1
+                i*=2
+                if (get(x+1, y-1)) i+=1
+                i*=2
+                if (get(x-1, y)) i+=1
+                i*=2
+                if (get(x, y)) i+=1
+                i*=2
+                if (get(x+1, y)) i+=1
+                i*=2
+                if (get(x-1, y+1)) i+=1
+                i*=2
+                if (get(x, y+1)) i+=1
+                i*=2
+                if (get(x+1, y+1)) i+=1
+                algo.get(i)
             }
         }
 
-        val newVoid = algo.get(List(9) { void })
+        val newVoid = algo.handleVoid(void)
 
         return State(newData, newVoid)
     }

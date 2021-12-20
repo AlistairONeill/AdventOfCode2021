@@ -9,14 +9,12 @@ fun day20() {
         .let { (algo, start) ->
             (0 until 2)
                 .fold(start) { acc, _ -> acc.apply(algo) }
-                .points
-                .size
+                .lit
                 .let(::println)
 
             (0 until 50)
                 .fold(start) { acc, _ -> acc.apply(algo) }
-                .points
-                .size
+                .lit
                 .let(::println)
         }
 
@@ -51,78 +49,47 @@ private fun Char.toBool() =
         else -> error("Invalid Algorithm character")
     }
 
-private typealias Point = Pair<Int, Int>
-
 private data class State(
-    private val minX: Int,
-    private val minY: Int,
-    private val maxX: Int,
-    private val maxY: Int,
-    val points: Set<Point>,
+    private val data: List<List<Boolean>>,
     private val void: Boolean
 ) {
     companion object {
         fun parse(input: String): State =
             input.split("\n").map { line ->
                 line.map(Char::toBool)
-            }.run {
-                State(
-                    0,
-                    0,
-                    first().size - 1,
-                    size - 1,
-                    flatMapIndexed { y, row ->
-                        row.mapIndexedNotNull { x, lit ->
-                            if (lit) Point(x, y) else null
-                        }
-                    }.toSet(),
-                    false
-                )
+            }.let {
+                State(it, false)
             }
     }
 
-    private val cache = mutableMapOf<Point, Boolean>()
+    private val width = data.first().size
+    private val height = data.size
+    val lit get() = data.sumOf { row -> row.count { it }}
 
-    private fun get(point: Point): Boolean =
-        cache[point]
-            ?: (if (point.first in minX..maxX && point.second in minY..maxY) points.contains(point)
-                else void)
-                .also { cache[point] = it }
+    private fun get(x: Int, y: Int): Boolean =
+        if (x >= 0 && y >= 0 && x < width && y < height) data[y][x]
+        else void
 
 
     fun apply(algo: Algorithm): State {
-        val newMinX = minX - 1
-        val newMaxX = maxX + 1
-        val newMinY = minY - 1
-        val newMaxY = maxY + 1
-
-        val newPoints = (newMinX..newMaxX).flatMap { x ->
-            (newMinY..newMaxY).map { y ->
-                (x to y) to listOf(
-                    get(x-1 to y-1),
-                    get(x to y-1),
-                    get(x+1 to y-1),
-                    get(x-1 to y),
-                    get(x to y),
-                    get(x+1 to y),
-                    get(x-1 to y+1),
-                    get(x to y+1),
-                    get(x+1 to y+1)
-                )
+        val newData = (-1 .. height).map { y ->
+            (-1 .. width).map { x ->
+                listOf(
+                    get(x-1, y-1),
+                    get(x, y-1),
+                    get(x+1, y-1),
+                    get(x-1, y),
+                    get(x, y),
+                    get(x+1, y),
+                    get(x-1, y+1),
+                    get(x, y+1),
+                    get(x+1, y+1)
+                ).let(algo::get)
             }
-        }.filter { algo.get(it.second) }
-            .map { it.first }
-            .toSet()
+        }
 
         val newVoid = algo.get(List(9) { void })
 
-        return State(
-            newMinX,
-            newMinY,
-            newMaxX,
-            newMaxY,
-            newPoints,
-            newVoid
-        )
+        return State(newData, newVoid)
     }
 }

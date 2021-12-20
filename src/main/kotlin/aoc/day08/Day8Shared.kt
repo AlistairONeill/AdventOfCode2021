@@ -1,7 +1,7 @@
-package aoc.day8
+package aoc.day08
 
-import aoc.day8.DisplayCableIdentifier.*
-import aoc.day8.DisplayDigit.*
+import aoc.day08.DisplayCableIdentifier.*
+import aoc.day08.DisplayDigit.*
 
 private val part1Digits = setOf(ONE, FOUR, SEVEN, EIGHT)
 private fun isPart1Digit(digit: DisplayDigit) = digit in part1Digits

@@ -1,6 +1,6 @@
-package aoc.day2
+package aoc.day02
 
-import aoc.day2.Direction.*
+import aoc.day02.Direction.*
 import java.io.File
 
 fun day2() {

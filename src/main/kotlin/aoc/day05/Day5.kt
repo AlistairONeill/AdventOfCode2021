@@ -1,4 +1,4 @@
-package aoc.day5
+package aoc.day05
 
 import java.io.File
 

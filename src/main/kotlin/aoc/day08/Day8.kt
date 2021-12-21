@@ -181,7 +181,6 @@ private fun InputRow.solve(): Output =
 
 private class ConstraintSolver(initial: Set<Constraint>) {
     private var constraints = initial.flatMap(Constraint::simplify).toMutableList()
-    private val superseded = mutableSetOf<Constraint>()
 
     private val isSolved
         get() = constraints
@@ -214,16 +213,6 @@ private class ConstraintSolver(initial: Set<Constraint>) {
     fun applyLogicStep() {
         applySoloLogic()
         applyPairLogic()
-        removeSuperseded()
-    }
-
-
-    private fun removeSuperseded() {
-        replaceConstraints(
-            constraints.filter {
-                !superseded.contains(it)
-            }.toSet()
-        )
     }
 
     private fun applySoloLogic() {
@@ -264,10 +253,6 @@ private class ConstraintSolver(initial: Set<Constraint>) {
             constraints.flatMap { first ->
                 constraints.flatMap { second ->
                     applyLogic2(first, second)
-                        ?.apply {
-                            if (!contains(first)) superseded.add(first)
-                            if (!contains(second)) superseded.add(second)
-                        }
                         ?: emptySet()
                 }
             }.toSet()

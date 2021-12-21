@@ -180,7 +180,7 @@ private fun InputRow.solve(): Output =
         .perform(toSolve)
 
 private class ConstraintSolver(initial: Set<Constraint>) {
-    private var constraints = initial.flatMap(Constraint::simplify).toSet()
+    private var constraints = initial.flatMap(Constraint::simplify).toMutableList()
     private val superseded = mutableSetOf<Constraint>()
 
     private val isSolved
@@ -199,8 +199,16 @@ private class ConstraintSolver(initial: Set<Constraint>) {
         if (!isSolved) error(":'(")
     }
 
+    private fun addConstraint(constraint: Constraint) {
+        if (!constraints.contains(constraint)) {
+            constraints.add(constraint)
+        }
+    }
+
     private fun replaceConstraints(new: Set<Constraint>) {
-        constraints = new.flatMap(Constraint::simplify).toSet()
+        constraints.clear()
+        new.flatMap(Constraint::simplify).toSet()
+            .forEach(::addConstraint)
     }
 
     fun applyLogicStep() {
@@ -252,16 +260,18 @@ private class ConstraintSolver(initial: Set<Constraint>) {
     private fun applyLogic(constraint: SolvedLink): Set<Constraint> = setOf(constraint)
 
     private fun applyPairLogic() {
-        constraints = constraints.flatMap { first ->
-            constraints.flatMap { second ->
-                applyLogic2(first, second)
-                    ?.apply {
-                        if (!contains(first)) superseded.add(first)
-                        if (!contains(second)) superseded.add(second)
-                    }
-                    ?: emptySet()
-            }
-        }.toSet()
+        replaceConstraints(
+            constraints.flatMap { first ->
+                constraints.flatMap { second ->
+                    applyLogic2(first, second)
+                        ?.apply {
+                            if (!contains(first)) superseded.add(first)
+                            if (!contains(second)) superseded.add(second)
+                        }
+                        ?: emptySet()
+                }
+            }.toSet()
+        )
     }
 
     private fun applyLogic2(first: Constraint, second: Constraint): Set<Constraint>? =

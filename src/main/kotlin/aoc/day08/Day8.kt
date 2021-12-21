@@ -199,6 +199,10 @@ private class ConstraintSolver(initial: Set<Constraint>) {
         if (!isSolved) error(":'(")
     }
 
+    private fun replaceConstraints(new: Set<Constraint>) {
+        constraints = new
+    }
+
     fun applyLogicStep() {
         applySelfSimplification()
         applySoloLogic()
@@ -208,19 +212,25 @@ private class ConstraintSolver(initial: Set<Constraint>) {
 
 
     private fun removeSuperseded() {
-        constraints = constraints.filter {
-            !superseded.contains(it)
-        }.toSet()
+        replaceConstraints(
+            constraints.filter {
+                !superseded.contains(it)
+            }.toSet()
+        )
     }
 
     private fun applySelfSimplification() {
-        constraints = constraints.flatMap(Constraint::simplify).toSet()
+        replaceConstraints(
+            constraints.flatMap(Constraint::simplify).toSet()
+        )
     }
 
     private fun applySoloLogic() {
-        constraints = constraints.flatMap {
-            applyLogic(it)
-        }.toSet()
+        replaceConstraints(
+            constraints.flatMap {
+                applyLogic(it)
+            }.toSet()
+        )
     }
 
     private fun applyLogic(constraint: Constraint): Set<Constraint> =

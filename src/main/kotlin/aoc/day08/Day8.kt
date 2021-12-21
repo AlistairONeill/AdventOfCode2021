@@ -142,9 +142,11 @@ private data class ManyToMany(
     val destination: Set<DisplayCableIdentifier>
 ) : Constraint() {
     override fun simplify() =
-        origin.singleOrNull()?.let { OneToMany(it, destination).simplify() }
-            ?: destination.singleOrNull()?.let { ManyToOne(origin, it).simplify() }
-            ?: setOf(this)
+        setOf(
+            origin.singleOrNull()?.let { OneToMany(it, destination) }
+                ?: destination.singleOrNull()?.let { ManyToOne(origin, it) }
+                ?: this
+        )
 
 }
 
@@ -199,15 +201,19 @@ private class ConstraintSolver(initial: Set<Constraint>) {
     }
 
     private fun addConstraint(constraint: Constraint) {
-        if (!constraints.contains(constraint)) {
-            constraints.add(constraint)
+        val simplified = constraint.simplify()
+        if (simplified == setOf(constraint)) {
+            if (!constraints.contains(constraint)) {
+                constraints.add(constraint)
+            }
+        } else {
+            simplified.forEach(::addConstraint)
         }
     }
 
     private fun replaceConstraints(new: Set<Constraint>) {
         constraints.clear()
-        new.flatMap(Constraint::simplify).toSet()
-            .forEach(::addConstraint)
+        new.forEach(::addConstraint)
     }
 
     fun applyLogicStep() {

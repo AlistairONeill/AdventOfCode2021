@@ -111,9 +111,22 @@ internal class ActualMapping(data: Map<DisplayCableIdentifier, DisplayCableIdent
     override fun apply(input: Input): DisplayDigit = super.apply(input)!!
 }
 
+private data class Deduction(
+    val keepFirst: Boolean,
+    val keepSecond: Boolean,
+    val new: Set<Constraint>
+) {
+    fun flip() =
+        Deduction(
+            keepSecond,
+            keepFirst,
+            new
+        )
+}
+
 private sealed class Constraint {
     abstract fun simplify(): Set<Constraint>
-    fun deduce(other: Constraint) =
+    fun deduce(other: Constraint): Deduction? =
         when (other) {
             is EntryConstraint -> deduce(other)
             is ManyToMany -> deduce(other)
@@ -122,11 +135,11 @@ private sealed class Constraint {
             is SolvedLink -> deduce(other)
         }
 
-    abstract fun deduce(other: SolvedLink): Set<Constraint>?
-    abstract fun deduce(other: EntryConstraint): Set<Constraint>?
-    abstract fun deduce(other: ManyToMany): Set<Constraint>?
-    abstract fun deduce(other: ManyToOne): Set<Constraint>?
-    abstract fun deduce(other: OneToMany): Set<Constraint>?
+    abstract fun deduce(other: SolvedLink): Deduction?
+    abstract fun deduce(other: EntryConstraint): Deduction?
+    abstract fun deduce(other: ManyToMany): Deduction?
+    abstract fun deduce(other: ManyToOne): Deduction?
+    abstract fun deduce(other: OneToMany): Deduction?
 }
 
 private data class SolvedLink(
@@ -135,9 +148,9 @@ private data class SolvedLink(
 ) : Constraint() {
     override fun simplify() = setOf(this)
 
-    override fun deduce(other: SolvedLink) = null
+    override fun deduce(other: SolvedLink): Deduction? = null
 
-    override fun deduce(other: EntryConstraint): Set<Constraint>? {
+    override fun deduce(other: EntryConstraint): Deduction? {
         val newPossible = if (other.input.contains(origin)) {
             other.possible.filter {
                 it.contains(destination)
@@ -149,35 +162,49 @@ private data class SolvedLink(
         }.toSet()
 
         return if (newPossible != other.possible) {
-            setOf(EntryConstraint(other.input, newPossible))
+            Deduction(
+                keepFirst = true,
+                keepSecond = false,
+                new = setOf(EntryConstraint(other.input, newPossible))
+            )
         } else {
             null
         }
     }
 
-    override fun deduce(other: ManyToMany): Set<Constraint>? {
+    override fun deduce(other: ManyToMany): Deduction? {
         val newOrigin = other.origin.filter { it != origin }.toSet()
         val newDestination = other.destination.filter { it != destination }.toSet()
 
         return if (newOrigin == other.origin && newDestination == other.destination) {
             null
         } else {
-            setOf(
-                ManyToMany(newOrigin, newDestination)
+            Deduction(
+                keepFirst = true,
+                keepSecond = false,
+                new = setOf(ManyToMany(newOrigin, newDestination))
             )
         }
     }
 
-    override fun deduce(other: ManyToOne): Set<Constraint>? =
+    override fun deduce(other: ManyToOne): Deduction? =
         if (other.destination == destination) {
-            emptySet()
+            Deduction(
+                keepFirst = true,
+                keepSecond = false,
+                new = emptySet()
+            )
         } else {
             null
         }
 
-    override fun deduce(other: OneToMany): Set<Constraint>? =
+    override fun deduce(other: OneToMany): Deduction? =
         if (other.origin == origin) {
-            emptySet()
+            Deduction(
+                keepFirst = true,
+                keepSecond = false,
+                new = emptySet()
+            )
         } else {
             null
         }
@@ -202,23 +229,27 @@ private data class EntryConstraint(
                         else this
                 )
 
-    override fun deduce(other: SolvedLink) = other.deduce(this)
+    override fun deduce(other: SolvedLink) = other.deduce(this)?.flip()
 
-    override fun deduce(other: EntryConstraint): Set<Constraint>? =
+    override fun deduce(other: EntryConstraint): Deduction? =
         if (other.input == input) {
-            setOf(
-                EntryConstraint(
-                    other.input,
-                    other.possible.intersect(possible)
+            Deduction(
+                keepFirst = false,
+                keepSecond = false,
+                new = setOf(
+                    EntryConstraint(
+                        other.input,
+                        other.possible.intersect(possible)
+                    )
                 )
             )
         } else {
             null
         }
 
-    override fun deduce(other: ManyToMany): Set<Constraint>? = null
+    override fun deduce(other: ManyToMany): Deduction? = null
 
-    override fun deduce(other: ManyToOne): Set<Constraint>? {
+    override fun deduce(other: ManyToOne): Deduction? {
         val newPossible = if (input.containsAll(other.origin)) {
             possible.filter {
                 it.contains(other.destination)
@@ -228,13 +259,18 @@ private data class EntryConstraint(
         }
 
         return if (newPossible != possible) {
-            setOf(EntryConstraint(input, newPossible))
+            Deduction(
+                keepFirst = true, //TODO: [AON] Turn off?
+                keepSecond = true,
+                new = setOf(EntryConstraint(input, newPossible))
+            )
+
         } else {
             null
         }
     }
 
-    override fun deduce(other: OneToMany): Set<Constraint>? {
+    override fun deduce(other: OneToMany): Deduction? {
         val newPossible = if (input.contains(other.origin)) {
             possible.filter { possibility ->
                 other.destination.any { possibility.contains(it) }
@@ -244,7 +280,11 @@ private data class EntryConstraint(
         }
 
         return if (newPossible != possible) {
-            setOf(EntryConstraint(input, newPossible))
+            Deduction(
+                keepFirst = true, //TODO: [AON] Switch this off?
+                keepSecond = true,
+                new = setOf(EntryConstraint(input, newPossible))
+            )
         } else {
             null
         }
@@ -262,11 +302,11 @@ private data class ManyToMany(
                 ?: if (origin.isEmpty()) null else this
         )
 
-    override fun deduce(other: SolvedLink) = other.deduce(this)
+    override fun deduce(other: SolvedLink) = other.deduce(this)?.flip()
 
-    override fun deduce(other: EntryConstraint) = other.deduce(this)
+    override fun deduce(other: EntryConstraint) = other.deduce(this)?.flip()
 
-    override fun deduce(other: ManyToMany): Set<Constraint>? {
+    override fun deduce(other: ManyToMany): Deduction? {
         val originIntersection = origin.intersect(other.origin)
         val firstOriginMissing = origin.subtract(originIntersection)
         val secondOriginMissing = other.origin.subtract(originIntersection)
@@ -282,24 +322,36 @@ private data class ManyToMany(
         return if (originIntersection.isEmpty()) {
             null
         } else {
-            setOf(
-                ManyToMany(originIntersection, destinationIntersection),
-                ManyToMany(firstOriginMissing, firstDestinationMissing),
-                ManyToMany(secondOriginMissing, secondDestinationMissing)
+            Deduction(
+                keepFirst = false,
+                keepSecond = false,
+                new = setOf(
+                    ManyToMany(originIntersection, destinationIntersection),
+                    ManyToMany(firstOriginMissing, firstDestinationMissing),
+                    ManyToMany(secondOriginMissing, secondDestinationMissing)
+                )
             )
         }
     }
 
-    override fun deduce(other: ManyToOne): Set<Constraint>? =
+    override fun deduce(other: ManyToOne): Deduction? =
         if (origin == other.origin) {
-            emptySet()
+            Deduction(
+                keepFirst = false,
+                keepSecond = true,
+                new = emptySet()
+            )
         } else {
             null
         }
 
-    override fun deduce(other: OneToMany): Set<Constraint>? =
+    override fun deduce(other: OneToMany): Deduction? =
         if (destination == other.destination) {
-            emptySet()
+            Deduction(
+                keepFirst = false,
+                keepSecond = true,
+                new = emptySet()
+            )
         } else {
             null
         }
@@ -314,22 +366,29 @@ private data class OneToMany(
             destination.singleOrNull()?.let { SolvedLink(origin, it) } ?: this
         )
 
-    override fun deduce(other: SolvedLink): Set<Constraint>? = other.deduce(this)
+    override fun deduce(other: SolvedLink) = other.deduce(this)?.flip()
 
-    override fun deduce(other: EntryConstraint): Set<Constraint>? = other.deduce(this)
+    override fun deduce(other: EntryConstraint) = other.deduce(this)?.flip()
 
-    override fun deduce(other: ManyToMany): Set<Constraint>? = other.deduce(this)
+    override fun deduce(other: ManyToMany) = other.deduce(this)?.flip()
 
-    override fun deduce(other: ManyToOne): Set<Constraint>? = null
+    override fun deduce(other: ManyToOne): Deduction? = null
 
-    override fun deduce(other: OneToMany): Set<Constraint>? =
+    override fun deduce(other: OneToMany): Deduction? =
         if (origin == other.origin) {
-            setOf(
-                OneToMany(
-                    origin,
-                    destination.intersect(other.destination)
+            val intersection = destination.intersect(other.destination)
+            if (intersection != destination && intersection != other.destination) {
+                Deduction(
+                    keepFirst = false,
+                    keepSecond = false,
+                    new = setOf(
+                        OneToMany(
+                            origin,
+                            destination.intersect(other.destination)
+                        )
+                    )
                 )
-            )
+            } else null
         } else {
             null
         }
@@ -343,20 +402,27 @@ private data class ManyToOne(
         origin.singleOrNull()?.let { SolvedLink(it, destination) } ?: this
     )
 
-    override fun deduce(other: SolvedLink) = other.deduce(this)
+    override fun deduce(other: SolvedLink) = other.deduce(this)?.flip()
 
-    override fun deduce(other: EntryConstraint) = other.deduce(this)
+    override fun deduce(other: EntryConstraint) = other.deduce(this)?.flip()
 
-    override fun deduce(other: ManyToMany) = other.deduce(this)
+    override fun deduce(other: ManyToMany) = other.deduce(this)?.flip()
 
-    override fun deduce(other: ManyToOne): Set<Constraint>? =
+    override fun deduce(other: ManyToOne): Deduction? =
         if (destination == other.destination) {
-            setOf(
-                ManyToOne(
-                    origin.intersect(other.origin),
-                    destination
+            val intersection = origin.intersect(other.origin)
+            if (intersection != origin && intersection != other.origin) {
+                Deduction(
+                    keepFirst = false,
+                    keepSecond = false,
+                    new = setOf(
+                        ManyToOne(
+                            intersection,
+                            destination
+                        )
+                    )
                 )
-            )
+            } else null
         } else {
             null
         }
@@ -391,7 +457,7 @@ private class ConstraintSolver(initial: Set<Constraint>) {
 
     fun solve() {
         var safety = 0
-        while (!isSolved && i<constraints.size) {
+        while (!isSolved && i < constraints.size) {
             safety += 1
             if (safety > 500) break
             applyLogicStep()
@@ -420,7 +486,7 @@ private class ConstraintSolver(initial: Set<Constraint>) {
         (0 until i).forEach { j ->
             val past = constraints[j]
             val logic2 = past.deduce(current)
-            logic2?.forEach(::addConstraint)
+            logic2?.new?.forEach(::addConstraint)
         }
     }
 

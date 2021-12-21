@@ -51,7 +51,7 @@ fun allDays(): Sequence<AdventOfCodeDay> =
     )
 
 fun main() {
-    stats()
+    perform(Day8).print()
 }
 
 fun stats() {

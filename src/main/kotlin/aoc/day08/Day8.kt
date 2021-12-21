@@ -4,7 +4,7 @@ import aoc.AdventOfCodeDay
 import aoc.day08.DisplayCableIdentifier.*
 import aoc.day08.DisplayDigit.*
 
-object Day8: AdventOfCodeDay {
+object Day8 : AdventOfCodeDay {
     override fun String.solve(): Pair<String, String> =
         lines()
             .map(::parse)
@@ -25,6 +25,7 @@ internal fun Solution.part1() = flatten().count(::isPart1Digit).toString()
 internal fun Solution.part2() = sumOf(List<DisplayDigit>::toInt).toString()
 
 private typealias Solution = List<Output>
+
 internal data class InputRow(val population: InputPopulation, val toSolve: UnknownNumber)
 private typealias InputPopulation = Set<Input>
 internal typealias UnknownNumber = List<Input>
@@ -40,19 +41,20 @@ internal enum class DisplayDigit {
     ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE
 }
 
-internal val DisplayDigit.outputs get() =
-    when (this) {
-        ZERO -> setOf(a, b, c, e, f, g)
-        ONE -> setOf(c, f)
-        TWO -> setOf(a, c, d, e, g)
-        THREE -> setOf(a, c, d, f, g)
-        FOUR -> setOf(b, c, d, f)
-        FIVE -> setOf(a, b, d, f, g)
-        SIX -> setOf(a, b, d, e, f, g)
-        SEVEN -> setOf(a, c, f)
-        EIGHT -> setOf(a, b, c, d, e, f, g)
-        NINE -> setOf(a, b, c, d, f, g)
-    }
+internal val DisplayDigit.outputs
+    get() =
+        when (this) {
+            ZERO -> setOf(a, b, c, e, f, g)
+            ONE -> setOf(c, f)
+            TWO -> setOf(a, c, d, e, g)
+            THREE -> setOf(a, c, d, f, g)
+            FOUR -> setOf(b, c, d, f)
+            FIVE -> setOf(a, b, d, f, g)
+            SIX -> setOf(a, b, d, e, f, g)
+            SEVEN -> setOf(a, c, f)
+            EIGHT -> setOf(a, b, c, d, e, f, g)
+            NINE -> setOf(a, b, c, d, f, g)
+        }
 
 private val outputToDigit = mapOf(
     ZERO.outputs to ZERO,
@@ -87,7 +89,7 @@ private fun DisplayDigit.toInt(): Int =
         NINE -> 9
     }
 
-private fun String.toInput() : Input =
+private fun String.toInput(): Input =
     toCharArray()
         .map(Char::toString)
         .map(DisplayCableIdentifier::valueOf)
@@ -101,35 +103,38 @@ internal fun parse(input: String): InputRow {
 }
 
 internal abstract class AbstractMapping(protected val data: Map<DisplayCableIdentifier, DisplayCableIdentifier>) {
-    open fun apply(input: Input): DisplayDigit? = input.map{ data[it]!! }.toSet().toDisplayDigit()
+    open fun apply(input: Input): DisplayDigit? = input.map { data[it]!! }.toSet().toDisplayDigit()
 }
 
 internal class ActualMapping(data: Map<DisplayCableIdentifier, DisplayCableIdentifier>) :
     AbstractMapping(data) {
-    override fun apply(input: Input) : DisplayDigit = super.apply(input)!!
+    override fun apply(input: Input): DisplayDigit = super.apply(input)!!
 }
 
 private sealed class Constraint {
-    abstract fun simplify(): Constraint
+    abstract fun simplify(): Set<Constraint>
 }
 
 private data class SolvedLink(
     val origin: DisplayCableIdentifier,
     val destination: DisplayCableIdentifier
 ) : Constraint() {
-    override fun simplify() = this
+    override fun simplify() = setOf(this)
 }
 
 private data class EntryConstraint(
     val input: Set<DisplayCableIdentifier>,
     val possible: Set<Set<DisplayCableIdentifier>>
 ) : Constraint() {
-    override fun simplify() =
+    override fun simplify() = setOf(
         possible.singleOrNull()?.let { ManyToMany(input, it) }
-            ?: EntryConstraint(
-                input,
-                possible.filter { it.size == input.size }.toSet()
-            )
+            ?: if (possible.any { it.size != input.size })
+                EntryConstraint(
+                    input,
+                    possible.filter { it.size == input.size }.toSet()
+                )
+            else this
+    )
 }
 
 private data class ManyToMany(
@@ -137,23 +142,29 @@ private data class ManyToMany(
     val destination: Set<DisplayCableIdentifier>
 ) : Constraint() {
     override fun simplify() =
-        origin.singleOrNull()?.let { OneToMany(it, destination) }
-            ?: destination.singleOrNull()?.let { ManyToOne(origin, it) }
-            ?: this
+        origin.singleOrNull()?.let { OneToMany(it, destination).simplify() }
+            ?: destination.singleOrNull()?.let { ManyToOne(origin, it).simplify() }
+            ?: setOf(this)
+
 }
 
 private data class OneToMany(
     val origin: DisplayCableIdentifier,
     val destination: Set<DisplayCableIdentifier>
 ) : Constraint() {
-    override fun simplify() = destination.singleOrNull()?.let { SolvedLink(origin, it) } ?: this
+    override fun simplify() =
+        setOf(
+            destination.singleOrNull()?.let { SolvedLink(origin, it) } ?: this
+        )
 }
 
 private data class ManyToOne(
     val origin: Set<DisplayCableIdentifier>,
     val destination: DisplayCableIdentifier
 ) : Constraint() {
-    override fun simplify() = origin.singleOrNull()?.let { SolvedLink(it, destination) } ?: this
+    override fun simplify() = setOf(
+        origin.singleOrNull()?.let { SolvedLink(it, destination) } ?: this
+    )
 }
 
 private fun InputRow.solve(): Output =
@@ -172,9 +183,10 @@ private class ConstraintSolver(initial: Set<Constraint>) {
     private var constraints = initial
     private val superseded = mutableSetOf<Constraint>()
 
-    private val isSolved get() = constraints
-        .filterIsInstance<SolvedLink>()
-        .size == DisplayCableIdentifier.values().size
+    private val isSolved
+        get() = constraints
+            .filterIsInstance<SolvedLink>()
+            .size == DisplayCableIdentifier.values().size
 
     fun solve() {
         var safety = 0
@@ -202,7 +214,7 @@ private class ConstraintSolver(initial: Set<Constraint>) {
     }
 
     private fun applySelfSimplification() {
-        constraints = constraints.map(Constraint::simplify).toSet()
+        constraints = constraints.flatMap(Constraint::simplify).toSet()
     }
 
     private fun applySoloLogic() {

@@ -185,7 +185,11 @@ private fun InputRow.solve(): Output =
         .perform(toSolve)
 
 private class ConstraintSolver(initial: Set<Constraint>) {
-    private var constraints = initial.flatMap(Constraint::simplify).toMutableList()
+    private val constraints = ArrayList<Constraint>()
+
+    init {
+        initial.forEach(::addConstraint)
+    }
 
     private val isSolved
         get() = constraints

@@ -126,15 +126,19 @@ private data class EntryConstraint(
     val input: Set<DisplayCableIdentifier>,
     val possible: Set<Set<DisplayCableIdentifier>>
 ) : Constraint() {
-    override fun simplify() = setOf(
-        possible.singleOrNull()?.let { ManyToMany(input, it) }
-            ?: if (possible.any { it.size != input.size })
-                EntryConstraint(
-                    input,
-                    possible.filter { it.size == input.size }.toSet()
+    override fun simplify() =
+        possible.reduce { a, b -> a.intersect(b) }
+            .map { ManyToOne(input, it) }
+            .toSet() +
+                setOf(
+                    possible.singleOrNull()?.let { ManyToMany(input, it) }
+                        ?: if (possible.any { it.size != input.size })
+                            EntryConstraint(
+                                input,
+                                possible.filter { it.size == input.size }.toSet()
+                            )
+                        else this
                 )
-            else this
-    )
 }
 
 private data class ManyToMany(
@@ -142,12 +146,11 @@ private data class ManyToMany(
     val destination: Set<DisplayCableIdentifier>
 ) : Constraint() {
     override fun simplify() =
-        setOf(
+        setOfNotNull(
             origin.singleOrNull()?.let { OneToMany(it, destination) }
                 ?: destination.singleOrNull()?.let { ManyToOne(origin, it) }
-                ?: this
+                ?: if (origin.isEmpty()) null else this
         )
-
 }
 
 private data class OneToMany(
@@ -202,10 +205,12 @@ private class ConstraintSolver(initial: Set<Constraint>) {
 
     private fun addConstraint(constraint: Constraint) {
         val simplified = constraint.simplify()
-        if (simplified == setOf(constraint)) {
+        if (simplified.contains(constraint)) {
             if (!constraints.contains(constraint)) {
                 constraints.add(constraint)
             }
+            simplified.filter { it != constraint }
+                .forEach(::addConstraint)
         } else {
             simplified.forEach(::addConstraint)
         }
@@ -217,42 +222,8 @@ private class ConstraintSolver(initial: Set<Constraint>) {
     }
 
     fun applyLogicStep() {
-        applySoloLogic()
         applyPairLogic()
     }
-
-    private fun applySoloLogic() {
-        replaceConstraints(
-            constraints.flatMap {
-                applyLogic(it)
-            }.toSet()
-        )
-    }
-
-    private fun applyLogic(constraint: Constraint): Set<Constraint> =
-        when (constraint) {
-            is EntryConstraint -> applyLogic(constraint)
-            is ManyToMany -> applyLogic(constraint)
-            is ManyToOne -> applyLogic(constraint)
-            is OneToMany -> applyLogic(constraint)
-            is SolvedLink -> applyLogic(constraint)
-        }
-
-    private fun applyLogic(constraint: EntryConstraint): Set<Constraint> =
-        constraint.possible.reduce { a, b -> a.intersect(b) }
-            .map { ManyToOne(constraint.input, it) }
-            .toSet() + constraint
-
-    private fun applyLogic(constraint: ManyToMany): Set<Constraint> =
-        if (constraint.origin.isEmpty()) {
-            emptySet()
-        } else {
-            setOf(constraint)
-        }
-
-    private fun applyLogic(constraint: ManyToOne): Set<Constraint> = setOf(constraint)
-    private fun applyLogic(constraint: OneToMany): Set<Constraint> = setOf(constraint)
-    private fun applyLogic(constraint: SolvedLink): Set<Constraint> = setOf(constraint)
 
     private fun applyPairLogic() {
         replaceConstraints(

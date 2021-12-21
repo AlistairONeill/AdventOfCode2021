@@ -113,6 +113,20 @@ internal class ActualMapping(data: Map<DisplayCableIdentifier, DisplayCableIdent
 
 private sealed class Constraint {
     abstract fun simplify(): Set<Constraint>
+    fun deduce(other: Constraint) =
+        when (other) {
+            is EntryConstraint -> deduce(other)
+            is ManyToMany -> deduce(other)
+            is ManyToOne -> deduce(other)
+            is OneToMany -> deduce(other)
+            is SolvedLink -> deduce(other)
+        }
+
+    abstract fun deduce(other: SolvedLink): Set<Constraint>?
+    abstract fun deduce(other: EntryConstraint): Set<Constraint>?
+    abstract fun deduce(other: ManyToMany): Set<Constraint>?
+    abstract fun deduce(other: ManyToOne): Set<Constraint>?
+    abstract fun deduce(other: OneToMany): Set<Constraint>?
 }
 
 private data class SolvedLink(
@@ -120,6 +134,54 @@ private data class SolvedLink(
     val destination: DisplayCableIdentifier
 ) : Constraint() {
     override fun simplify() = setOf(this)
+
+    override fun deduce(other: SolvedLink) = null
+
+    override fun deduce(other: EntryConstraint): Set<Constraint>? {
+        val newPossible = if (other.input.contains(origin)) {
+            other.possible.filter {
+                it.contains(destination)
+            }
+        } else {
+            other.possible.filter {
+                !it.contains(destination)
+            }
+        }.toSet()
+
+        return if (newPossible != other.possible) {
+            setOf(EntryConstraint(other.input, newPossible))
+        } else {
+            null
+        }
+    }
+
+    override fun deduce(other: ManyToMany): Set<Constraint>? {
+        val newOrigin = other.origin.filter { it != origin }.toSet()
+        val newDestination = other.destination.filter { it != destination }.toSet()
+
+        return if (newOrigin == other.origin && newDestination == other.destination) {
+            null
+        } else {
+            setOf(
+                ManyToMany(newOrigin, newDestination)
+            )
+        }
+    }
+
+    override fun deduce(other: ManyToOne): Set<Constraint>? =
+        if (other.destination == destination) {
+            emptySet()
+        } else {
+            null
+        }
+
+    override fun deduce(other: OneToMany): Set<Constraint>? =
+        if (other.origin == origin) {
+            emptySet()
+        } else {
+            null
+        }
+
 }
 
 private data class EntryConstraint(
@@ -139,6 +201,54 @@ private data class EntryConstraint(
                             )
                         else this
                 )
+
+    override fun deduce(other: SolvedLink) = other.deduce(this)
+
+    override fun deduce(other: EntryConstraint): Set<Constraint>? =
+        if (other.input == input) {
+            setOf(
+                EntryConstraint(
+                    other.input,
+                    other.possible.intersect(possible)
+                )
+            )
+        } else {
+            null
+        }
+
+    override fun deduce(other: ManyToMany): Set<Constraint>? = null
+
+    override fun deduce(other: ManyToOne): Set<Constraint>? {
+        val newPossible = if (input.containsAll(other.origin)) {
+            possible.filter {
+                it.contains(other.destination)
+            }.toSet()
+        } else {
+            possible
+        }
+
+        return if (newPossible != possible) {
+            setOf(EntryConstraint(input, newPossible))
+        } else {
+            null
+        }
+    }
+
+    override fun deduce(other: OneToMany): Set<Constraint>? {
+        val newPossible = if (input.contains(other.origin)) {
+            possible.filter { possibility ->
+                other.destination.any { possibility.contains(it) }
+            }.toSet()
+        } else {
+            possible
+        }
+
+        return if (newPossible != possible) {
+            setOf(EntryConstraint(input, newPossible))
+        } else {
+            null
+        }
+    }
 }
 
 private data class ManyToMany(
@@ -151,6 +261,48 @@ private data class ManyToMany(
                 ?: destination.singleOrNull()?.let { ManyToOne(origin, it) }
                 ?: if (origin.isEmpty()) null else this
         )
+
+    override fun deduce(other: SolvedLink) = other.deduce(this)
+
+    override fun deduce(other: EntryConstraint) = other.deduce(this)
+
+    override fun deduce(other: ManyToMany): Set<Constraint>? {
+        val originIntersection = origin.intersect(other.origin)
+        val firstOriginMissing = origin.subtract(originIntersection)
+        val secondOriginMissing = other.origin.subtract(originIntersection)
+
+        val destinationIntersection = destination.intersect(other.destination)
+        val firstDestinationMissing = destination.subtract(destinationIntersection)
+        val secondDestinationMissing = other.destination.subtract(destinationIntersection)
+
+        if (originIntersection.size != destinationIntersection.size) {
+            error("CONSTRAINTS INCONSISTENT")
+        }
+
+        return if (originIntersection.isEmpty()) {
+            null
+        } else {
+            setOf(
+                ManyToMany(originIntersection, destinationIntersection),
+                ManyToMany(firstOriginMissing, firstDestinationMissing),
+                ManyToMany(secondOriginMissing, secondDestinationMissing)
+            )
+        }
+    }
+
+    override fun deduce(other: ManyToOne): Set<Constraint>? =
+        if (origin == other.origin) {
+            emptySet()
+        } else {
+            null
+        }
+
+    override fun deduce(other: OneToMany): Set<Constraint>? =
+        if (destination == other.destination) {
+            emptySet()
+        } else {
+            null
+        }
 }
 
 private data class OneToMany(
@@ -161,6 +313,26 @@ private data class OneToMany(
         setOf(
             destination.singleOrNull()?.let { SolvedLink(origin, it) } ?: this
         )
+
+    override fun deduce(other: SolvedLink): Set<Constraint>? = other.deduce(this)
+
+    override fun deduce(other: EntryConstraint): Set<Constraint>? = other.deduce(this)
+
+    override fun deduce(other: ManyToMany): Set<Constraint>? = other.deduce(this)
+
+    override fun deduce(other: ManyToOne): Set<Constraint>? = null
+
+    override fun deduce(other: OneToMany): Set<Constraint>? =
+        if (origin == other.origin) {
+            setOf(
+                OneToMany(
+                    origin,
+                    destination.intersect(other.destination)
+                )
+            )
+        } else {
+            null
+        }
 }
 
 private data class ManyToOne(
@@ -170,6 +342,26 @@ private data class ManyToOne(
     override fun simplify() = setOf(
         origin.singleOrNull()?.let { SolvedLink(it, destination) } ?: this
     )
+
+    override fun deduce(other: SolvedLink) = other.deduce(this)
+
+    override fun deduce(other: EntryConstraint) = other.deduce(this)
+
+    override fun deduce(other: ManyToMany) = other.deduce(this)
+
+    override fun deduce(other: ManyToOne): Set<Constraint>? =
+        if (destination == other.destination) {
+            setOf(
+                ManyToOne(
+                    origin.intersect(other.origin),
+                    destination
+                )
+            )
+        } else {
+            null
+        }
+
+    override fun deduce(other: OneToMany) = other.deduce(this)
 }
 
 private fun InputRow.solve(): Output =
@@ -186,6 +378,7 @@ private fun InputRow.solve(): Output =
 
 private class ConstraintSolver(initial: Set<Constraint>) {
     private val constraints = ArrayList<Constraint>()
+    private var i = 0
 
     init {
         initial.forEach(::addConstraint)
@@ -198,10 +391,11 @@ private class ConstraintSolver(initial: Set<Constraint>) {
 
     fun solve() {
         var safety = 0
-        while (!isSolved) {
+        while (!isSolved && i<constraints.size) {
             safety += 1
             if (safety > 500) break
             applyLogicStep()
+            i += 1
         }
 
         if (!isSolved) error(":'(")
@@ -222,219 +416,13 @@ private class ConstraintSolver(initial: Set<Constraint>) {
     }
 
     fun applyLogicStep() {
-        applyPairLogic()
-    }
-
-    private fun applyPairLogic() {
-        val newConstraints = mutableSetOf<Constraint>()
-        constraints.forEach { first ->
-            constraints.forEach { second ->
-                applyLogic2(first, second)?.forEach(newConstraints::add)
-            }
-        }
-        newConstraints.forEach(::addConstraint)
-    }
-
-    private fun applyLogic2(first: Constraint, second: Constraint): Set<Constraint>? =
-        when (first) {
-            is EntryConstraint -> when (second) {
-                is EntryConstraint -> applyLogic(first, second)
-                is ManyToMany -> applyLogic(first, second)
-                is ManyToOne -> applyLogic(first, second)
-                is OneToMany -> applyLogic(first, second)
-                is SolvedLink -> applyLogic(first, second)
-            }
-            is ManyToMany -> when (second) {
-                is EntryConstraint -> applyLogic(second, first)
-                is ManyToMany -> applyLogic(first, second)
-                is ManyToOne -> applyLogic(first, second)
-                is OneToMany -> applyLogic(first, second)
-                is SolvedLink -> applyLogic(first, second)
-            }
-            is ManyToOne -> when (second) {
-                is EntryConstraint -> applyLogic(second, first)
-                is ManyToMany -> applyLogic(second, first)
-                is ManyToOne -> applyLogic(first, second)
-                is OneToMany -> applyLogic(first, second)
-                is SolvedLink -> applyLogic(first, second)
-            }
-            is OneToMany -> when (second) {
-                is EntryConstraint -> applyLogic(second, first)
-                is ManyToMany -> applyLogic(second, first)
-                is ManyToOne -> applyLogic(second, first)
-                is OneToMany -> applyLogic(first, second)
-                is SolvedLink -> applyLogic(first, second)
-            }
-            is SolvedLink -> when (second) {
-                is EntryConstraint -> applyLogic(second, first)
-                is ManyToMany -> applyLogic(second, first)
-                is ManyToOne -> applyLogic(second, first)
-                is OneToMany -> applyLogic(second, first)
-                is SolvedLink -> applyLogic(first, second)
-            }
-        }
-
-    private fun applyLogic(first: EntryConstraint, second: EntryConstraint): Set<Constraint>? =
-        if (first.input == second.input) {
-            setOf(
-                EntryConstraint(
-                    first.input,
-                    first.possible.intersect(second.possible)
-                )
-            )
-        } else {
-            null
-        }
-
-    @Suppress("UNUSED_PARAMETER")
-    private fun applyLogic(first: EntryConstraint, second: ManyToMany): Set<Constraint>? =
-        null
-
-    private fun applyLogic(first: EntryConstraint, second: ManyToOne): Set<Constraint>? {
-        val newPossible = if (first.input.containsAll(second.origin)) {
-            first.possible.filter {
-                it.contains(second.destination)
-            }.toSet()
-        } else {
-            first.possible
-        }
-
-        return if (newPossible != first.possible) {
-            setOf(EntryConstraint(first.input, newPossible), second)
-        } else {
-            null
+        val current = constraints[i]
+        (0 until i).forEach { j ->
+            val past = constraints[j]
+            val logic2 = past.deduce(current)
+            logic2?.forEach(::addConstraint)
         }
     }
-
-    private fun applyLogic(first: EntryConstraint, second: OneToMany): Set<Constraint>? {
-        val newPossible = if (first.input.contains(second.origin)) {
-            first.possible.filter { possibility ->
-                second.destination.any { possibility.contains(it) }
-            }.toSet()
-        } else {
-            first.possible
-        }
-
-        return if (newPossible != first.possible) {
-            setOf(EntryConstraint(first.input, newPossible), second)
-        } else {
-            null
-        }
-    }
-
-    private fun applyLogic(first: EntryConstraint, second: SolvedLink): Set<Constraint>? {
-        val newPossible = if (first.input.contains(second.origin)) {
-            first.possible.filter {
-                it.contains(second.destination)
-            }
-        } else {
-            first.possible.filter {
-                !it.contains(second.destination)
-            }
-        }.toSet()
-
-        return if (newPossible != first.possible) {
-            setOf(EntryConstraint(first.input, newPossible), second)
-        } else {
-            null
-        }
-    }
-
-    private fun applyLogic(first: ManyToMany, second: ManyToMany): Set<Constraint>? {
-        val originIntersection = first.origin.intersect(second.origin)
-        val firstOriginMissing = first.origin.subtract(originIntersection)
-        val secondOriginMissing = second.origin.subtract(originIntersection)
-
-        val destinationIntersection = first.destination.intersect(second.destination)
-        val firstDestinationMissing = first.destination.subtract(destinationIntersection)
-        val secondDestinationMissing = second.destination.subtract(destinationIntersection)
-
-        if (originIntersection.size != destinationIntersection.size) {
-            error("CONSTRAINTS INCONSISTENT")
-        }
-
-        return if (originIntersection.isEmpty()) {
-            null
-        } else {
-            setOf(
-                ManyToMany(originIntersection, destinationIntersection),
-                ManyToMany(firstOriginMissing, firstDestinationMissing),
-                ManyToMany(secondOriginMissing, secondDestinationMissing)
-            )
-        }
-    }
-
-    private fun applyLogic(first: ManyToMany, second: ManyToOne): Set<Constraint>? =
-        if (first.origin == second.origin) {
-            setOf(second)
-        } else {
-            null
-        }
-
-    private fun applyLogic(first: ManyToMany, second: OneToMany): Set<Constraint>? =
-        if (first.destination == second.destination) {
-            setOf(second)
-        } else {
-            null
-        }
-
-    private fun applyLogic(first: ManyToMany, second: SolvedLink): Set<Constraint>? {
-        val newOrigin = first.origin.filter { it != second.origin }.toSet()
-        val newDestination = first.destination.filter { it != second.destination }.toSet()
-
-        return if (newOrigin == first.origin && newDestination == first.destination) {
-            null
-        } else {
-            setOf(
-                ManyToMany(newOrigin, newDestination),
-                second
-            )
-        }
-    }
-
-    private fun applyLogic(first: ManyToOne, second: ManyToOne): Set<Constraint>? =
-        if (first.destination == second.destination) {
-            setOf(
-                ManyToOne(
-                    first.origin.intersect(second.origin),
-                    first.destination
-                )
-            )
-        } else {
-            null
-        }
-
-    @Suppress("UNUSED_PARAMETER")
-    private fun applyLogic(first: ManyToOne, second: OneToMany): Set<Constraint>? = null
-
-    private fun applyLogic(first: ManyToOne, second: SolvedLink): Set<Constraint>? =
-        if (first.destination == second.destination) {
-            setOf(second)
-        } else {
-            null
-        }
-
-    private fun applyLogic(first: OneToMany, second: OneToMany): Set<Constraint>? =
-        if (first.origin == second.origin) {
-            setOf(
-                OneToMany(
-                    first.origin,
-                    first.destination.intersect(second.destination)
-                )
-            )
-        } else {
-            null
-        }
-
-    private fun applyLogic(first: OneToMany, second: SolvedLink): Set<Constraint>? =
-        if (first.origin == second.origin) {
-            setOf(second)
-        } else {
-            null
-        }
-
-    private fun applyLogic(first: SolvedLink, second: SolvedLink): Set<Constraint> =
-        setOf(first, second)
 
     fun perform(toSolve: UnknownNumber): Output {
         val mapping = constraints.filterIsInstance<SolvedLink>()

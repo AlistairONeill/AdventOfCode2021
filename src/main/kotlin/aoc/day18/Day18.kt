@@ -4,7 +4,6 @@ package aoc.day18
 import aoc.AdventOfCodeDay
 import aoc.day18.SnailNumber.SnailLiteral
 import aoc.day18.SnailNumber.SnailPair
-import java.io.File
 
 object Day18 : AdventOfCodeDay {
     override fun String.solve(): Pair<String, String> =
@@ -15,15 +14,173 @@ object Day18 : AdventOfCodeDay {
     override val solution = "4033" to "4864"
 }
 
+private class SnakeNumber private constructor(private var head: Segment) {
+    class Segment(
+        var left: Segment?,
+        var right: Segment?,
+        var value: Int,
+        var depth: Int
+    )
+
+    companion object {
+        private fun Segment.farRight(): Segment = right?.farRight() ?: this
+
+        fun parse(input: String): SnakeNumber =
+            parseNext(input.iterator(), 0).let(::SnakeNumber)
+
+        private fun parseNext(iterator: CharIterator, depth: Int): Segment {
+            val first = iterator.nextChar()
+
+            return when {
+                first.isDigit() -> Segment(null, null, first.digitToInt(), depth)
+                first == '[' -> finishPairParse(iterator, depth)
+                else -> error("Not a digit or opening bracket")
+            }
+        }
+
+        private fun finishPairParse(iterator: CharIterator, depth: Int): Segment {
+            val first = parseNext(iterator, depth + 1)
+            if (iterator.nextChar() != ',') error("Expecting comma")
+            val second = parseNext(iterator, depth + 1)
+            if (iterator.nextChar() != ']') error("Expecting closing bracket")
+            second.left = first.farRight()
+            first.farRight().right = second
+            return first
+        }
+    }
+
+    private fun assertWellLinked() {
+        if (head.left != null) error("Head has a left!")
+        var segment : Segment? = head.right
+        while (segment != null) {
+            if (segment.left!!.right != segment) error("Things aren't being linked too good!")
+            segment = segment.right
+        }
+    }
+
+    private fun forEach(f: Segment.() -> Unit) {
+        var segment: Segment? = head
+        while (segment != null) {
+            segment.f()
+            segment = segment.right
+        }
+    }
+
+    operator fun plus(other: SnakeNumber): SnakeNumber {
+        other.head.left = head.farRight()
+        head.farRight().right = other.head
+
+        forEach { depth += 1 }
+        reduce()
+        return this
+    }
+
+    private fun reduce() {
+        while (true) {
+            assertWellLinked()
+            if (reduceByExplosion()) continue
+            if (reduceBySplit()) continue
+            break
+        }
+    }
+
+    private fun reduceByExplosion(): Boolean {
+        var segment: Segment? = head
+        while (segment != null) {
+            if (
+                segment.depth >= 5 &&
+                segment.depth == segment.right?.depth
+            ) {
+                val left = segment
+                val right = segment.right ?: error("Ruh Roh")
+
+                left.left?.run { value += left.value }
+                right.right?.run { value += right.value }
+
+                left.right = right.right
+                right.right?.left = left
+
+                left.value = 0
+                left.depth -= 1
+
+                return true
+            }
+            segment = segment.right
+        }
+        return false
+    }
+
+    private fun reduceBySplit(): Boolean {
+        var segment: Segment? = head
+        while (segment != null) {
+            if (segment.value > 9) {
+                val left = Segment(segment.left, null, segment.value / 2, segment.depth + 1)
+                val right = Segment(left, segment.right, segment.value / 2 + segment.value % 2, segment.depth + 1)
+                left.right = right
+                left.left?.right = left
+                right.right?.left = right
+
+                if (segment == head) {
+                    head = left
+                }
+                return true
+            }
+            segment = segment.right
+        }
+        return false
+    }
+
+    fun magnitude(): Int {
+        while (true) {
+            if (collapse()) continue
+            break
+        }
+        return head.value
+    }
+
+    private fun collapse(): Boolean {
+        var segment: Segment = head
+        while (true) {
+            val next = segment.right ?: return false
+
+            if (segment.depth == next.depth) {
+                segment.depth -= 1
+                segment.value = 3 * segment.value + 2 * next.value
+                segment.right = next.right
+                return true
+            }
+
+            segment = next
+        }
+    }
+
+    fun clone() =
+        SnakeNumber(
+            head.cloneRight()
+        )
+
+    fun Segment.cloneRight(): Segment =
+        Segment(
+            null,
+            right?.cloneRight(),
+            value,
+            depth
+        ).apply { right?.left = this}
+}
+
 private fun List<String>.part1() =
-    map(SnailNumber::parse)
-        .reduce(SnailNumber::plus)
-        .magnitude
+    map(SnakeNumber::parse)
+        .reduce(SnakeNumber::plus)
+        .magnitude()
         .toString()
 
 private fun List<String>.part2() =
-    flatMap { a -> map { b -> a to b } }
-        .maxOf { (a, b) -> SnailNumber.parse(a).plus(SnailNumber.parse(b)).magnitude }
+    map(SnakeNumber::parse)
+        .let {
+            it.flatMap { a ->
+                it.map { b -> a to b }
+            }
+        }.maxOf { (a, b) -> a.clone().plus(b.clone()).magnitude() }
         .toString()
 
 private sealed interface SnailNumber {

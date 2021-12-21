@@ -233,16 +233,19 @@ private data class EntryConstraint(
 
     override fun deduce(other: EntryConstraint): Deduction? =
         if (other.input == input) {
+            val intersect = other.possible.intersect(possible)
+            if (intersect != possible && intersect != other.possible) {
             Deduction(
                 keepFirst = false,
                 keepSecond = false,
                 new = setOf(
                     EntryConstraint(
                         other.input,
-                        other.possible.intersect(possible)
+                        intersect
                     )
                 )
             )
+            } else null
         } else {
             null
         }
@@ -264,7 +267,6 @@ private data class EntryConstraint(
                 keepSecond = true,
                 new = setOf(EntryConstraint(input, newPossible))
             )
-
         } else {
             null
         }
@@ -281,7 +283,7 @@ private data class EntryConstraint(
 
         return if (newPossible != possible) {
             Deduction(
-                keepFirst = true, //TODO: [AON] Switch this off?
+                keepFirst = false,
                 keepSecond = true,
                 new = setOf(EntryConstraint(input, newPossible))
             )
@@ -323,8 +325,8 @@ private data class ManyToMany(
             null
         } else {
             Deduction(
-                keepFirst = false,
-                keepSecond = false,
+                keepFirst = true,
+                keepSecond = true,
                 new = setOf(
                     ManyToMany(originIntersection, destinationIntersection),
                     ManyToMany(firstOriginMissing, firstDestinationMissing),
@@ -334,27 +336,8 @@ private data class ManyToMany(
         }
     }
 
-    override fun deduce(other: ManyToOne): Deduction? =
-        if (origin == other.origin) {
-            Deduction(
-                keepFirst = false,
-                keepSecond = true,
-                new = emptySet()
-            )
-        } else {
-            null
-        }
-
-    override fun deduce(other: OneToMany): Deduction? =
-        if (destination == other.destination) {
-            Deduction(
-                keepFirst = false,
-                keepSecond = true,
-                new = emptySet()
-            )
-        } else {
-            null
-        }
+    override fun deduce(other: ManyToOne): Deduction? = null
+    override fun deduce(other: OneToMany): Deduction? = null
 }
 
 private data class OneToMany(
@@ -384,7 +367,7 @@ private data class OneToMany(
                     new = setOf(
                         OneToMany(
                             origin,
-                            destination.intersect(other.destination)
+                            intersection
                         )
                     )
                 )
@@ -427,7 +410,7 @@ private data class ManyToOne(
             null
         }
 
-    override fun deduce(other: OneToMany) = other.deduce(this)
+    override fun deduce(other: OneToMany) = other.deduce(this)?.flip()
 }
 
 private fun InputRow.solve(): Output =
@@ -443,8 +426,10 @@ private fun InputRow.solve(): Output =
         .perform(toSolve)
 
 private class ConstraintSolver(initial: Set<Constraint>) {
+    private val dealtWith = HashSet<Constraint>()
     private val constraints = ArrayList<Constraint>()
     private var i = 0
+    private val superseded = mutableSetOf<Int>()
 
     init {
         initial.forEach(::addConstraint)
@@ -459,7 +444,7 @@ private class ConstraintSolver(initial: Set<Constraint>) {
         var safety = 0
         while (!isSolved && i < constraints.size) {
             safety += 1
-            if (safety > 500) break
+            if (safety > 2000) break
             applyLogicStep()
             i += 1
         }
@@ -467,26 +452,37 @@ private class ConstraintSolver(initial: Set<Constraint>) {
         if (!isSolved) error(":'(")
     }
 
-    private fun addConstraint(constraint: Constraint) {
-        val simplified = constraint.simplify()
-        if (simplified.contains(constraint)) {
-            if (!constraints.contains(constraint)) {
-                constraints.add(constraint)
-            }
 
-            simplified.filter { it != constraint }
-                .forEach(::addConstraint)
-        } else {
-            simplified.forEach(::addConstraint)
+
+    private fun addConstraint(constraint: Constraint) {
+        if (constraint !in dealtWith) {
+            dealtWith.add(constraint)
+            val simplified = constraint.simplify()
+            if (simplified.contains(constraint)) {
+                if (!constraints.contains(constraint)) {
+                    constraints.add(constraint)
+                }
+
+                simplified.filter { it != constraint }
+                    .forEach(::addConstraint)
+            } else {
+                simplified.forEach(::addConstraint)
+            }
         }
     }
 
     fun applyLogicStep() {
         val current = constraints[i]
         (0 until i).forEach { j ->
-            val past = constraints[j]
-            val logic2 = past.deduce(current)
-            logic2?.new?.forEach(::addConstraint)
+            if (i !in superseded && j !in superseded) {
+                val past = constraints[j]
+                val logic2 = past.deduce(current)
+                logic2?.run {
+                    if (!keepFirst) superseded.add(j)
+                    if (!keepSecond) superseded.add(i)
+                    new.forEach(::addConstraint)
+                }
+            }
         }
     }
 

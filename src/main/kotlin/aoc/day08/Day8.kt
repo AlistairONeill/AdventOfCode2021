@@ -200,7 +200,7 @@ private class ConstraintSolver(initial: Set<Constraint>) {
     }
 
     private fun replaceConstraints(new: Set<Constraint>) {
-        constraints = new
+        constraints = new.flatMap(Constraint::simplify).toSet()
     }
 
     fun applyLogicStep() {

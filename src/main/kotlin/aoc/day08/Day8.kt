@@ -235,16 +235,16 @@ private data class EntryConstraint(
         if (other.input == input) {
             val intersect = other.possible.intersect(possible)
             if (intersect != possible && intersect != other.possible) {
-            Deduction(
-                keepFirst = false,
-                keepSecond = false,
-                new = setOf(
-                    EntryConstraint(
-                        other.input,
-                        intersect
+                Deduction(
+                    keepFirst = false,
+                    keepSecond = false,
+                    new = setOf(
+                        EntryConstraint(
+                            other.input,
+                            intersect
+                        )
                     )
                 )
-            )
             } else null
         } else {
             null
@@ -263,7 +263,7 @@ private data class EntryConstraint(
 
         return if (newPossible != possible) {
             Deduction(
-                keepFirst = true, //TODO: [AON] Turn off?
+                keepFirst = false,
                 keepSecond = true,
                 new = setOf(EntryConstraint(input, newPossible))
             )
@@ -453,7 +453,6 @@ private class ConstraintSolver(initial: Set<Constraint>) {
     }
 
 
-
     private fun addConstraint(constraint: Constraint) {
         if (constraint !in dealtWith) {
             dealtWith.add(constraint)
@@ -475,13 +474,13 @@ private class ConstraintSolver(initial: Set<Constraint>) {
         val current = constraints[i]
         (0 until i).forEach { j ->
             if (i !in superseded && j !in superseded) {
-                val past = constraints[j]
-                val logic2 = past.deduce(current)
-                logic2?.run {
-                    if (!keepFirst) superseded.add(j)
-                    if (!keepSecond) superseded.add(i)
-                    new.forEach(::addConstraint)
-                }
+                constraints[j]
+                    .deduce(current)
+                    ?.run {
+                        if (!keepFirst) superseded.add(j)
+                        if (!keepSecond) superseded.add(i)
+                        new.forEach(::addConstraint)
+                    }
             }
         }
     }

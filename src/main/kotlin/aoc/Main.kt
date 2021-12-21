@@ -20,11 +20,12 @@ import aoc.day17.Day17
 import aoc.day18.Day18
 import aoc.day19.Day19
 import aoc.day20.Day20
+import aoc.day21.Day21
 import java.io.File
 import java.time.Duration
 import java.time.Instant
 
-fun allDays() : Sequence<AdventOfCodeDay> =
+fun allDays(): Sequence<AdventOfCodeDay> =
     sequenceOf(
         Day1,
         Day2,
@@ -45,10 +46,17 @@ fun allDays() : Sequence<AdventOfCodeDay> =
         Day17,
         Day18,
         Day19,
-        Day20
+        Day20,
+        Day21
     )
 
 fun main() {
+    stats()
+}
+
+fun stats() {
+    println("First run")
+    println()
     println("/-------------------------\\")
     println("|Day|   Test   |   Real   |")
     println("|-------------------------|")
@@ -56,14 +64,38 @@ fun main() {
     allDays()
         .map(::perform)
 
-    val total = allDays()
+    val firstTotal = allDays()
         .map(::perform)
         .onEach(DayTimings::print)
         .reduce(DayTimings::plus)
+        .copy(day = "Sum")
 
     println("|-------------------------|")
-    total.print()
+    firstTotal.print()
     println("\\-------------------------/")
+
+    println()
+    println("Averages:")
+    println()
+
+    println("/-------------------------\\")
+    println("|Day|   Test   |   Real   |")
+    println("|-------------------------|")
+
+    val averageTotal = allDays().map { day ->
+        (0 until 10).map {
+            perform(day)
+        }
+            .reduce(DayTimings::plus)
+            .dividedBy(10)
+    }.onEach(DayTimings::print)
+        .reduce(DayTimings::plus)
+        .copy(day = "Sum")
+
+    println("|-------------------------|")
+    averageTotal.print()
+    println("\\-------------------------/")
+
 }
 
 private data class DayTimings(
@@ -80,9 +112,16 @@ private data class DayTimings(
 
     fun plus(other: DayTimings) =
         DayTimings(
-            "Sum",
+            day,
             test + other.test,
             real + other.real
+        )
+
+    fun dividedBy(other: Long) =
+        DayTimings(
+            day,
+            test.dividedBy(other),
+            real.dividedBy(other)
         )
 }
 

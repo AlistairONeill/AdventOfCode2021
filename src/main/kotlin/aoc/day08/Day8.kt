@@ -180,7 +180,7 @@ private fun InputRow.solve(): Output =
         .perform(toSolve)
 
 private class ConstraintSolver(initial: Set<Constraint>) {
-    private var constraints = initial
+    private var constraints = initial.flatMap(Constraint::simplify).toSet()
     private val superseded = mutableSetOf<Constraint>()
 
     private val isSolved
@@ -204,7 +204,6 @@ private class ConstraintSolver(initial: Set<Constraint>) {
     }
 
     fun applyLogicStep() {
-        applySelfSimplification()
         applySoloLogic()
         applyPairLogic()
         removeSuperseded()
@@ -216,12 +215,6 @@ private class ConstraintSolver(initial: Set<Constraint>) {
             constraints.filter {
                 !superseded.contains(it)
             }.toSet()
-        )
-    }
-
-    private fun applySelfSimplification() {
-        replaceConstraints(
-            constraints.flatMap(Constraint::simplify).toSet()
         )
     }
 

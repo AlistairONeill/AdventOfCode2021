@@ -209,6 +209,7 @@ private class ConstraintSolver(initial: Set<Constraint>) {
             if (!constraints.contains(constraint)) {
                 constraints.add(constraint)
             }
+
             simplified.filter { it != constraint }
                 .forEach(::addConstraint)
         } else {
@@ -216,24 +217,18 @@ private class ConstraintSolver(initial: Set<Constraint>) {
         }
     }
 
-    private fun replaceConstraints(new: Set<Constraint>) {
-        constraints.clear()
-        new.forEach(::addConstraint)
-    }
-
     fun applyLogicStep() {
         applyPairLogic()
     }
 
     private fun applyPairLogic() {
-        replaceConstraints(
-            constraints.flatMap { first ->
-                constraints.flatMap { second ->
-                    applyLogic2(first, second)
-                        ?: emptySet()
-                }
-            }.toSet()
-        )
+        val newConstraints = mutableSetOf<Constraint>()
+        constraints.forEach { first ->
+            constraints.forEach { second ->
+                applyLogic2(first, second)?.forEach(newConstraints::add)
+            }
+        }
+        newConstraints.forEach(::addConstraint)
     }
 
     private fun applyLogic2(first: Constraint, second: Constraint): Set<Constraint>? =

@@ -133,8 +133,8 @@ private fun perform(day: AdventOfCodeDay): DayTimings {
         if (test.first != day.test.first) error("Failed Test Part 1. Was ${test.first}")
         if (test.second != day.test.second) error("Failed Test Part 2. Was ${test.second}")
         val (realTimes, real) = timeIt { realInput.solve() }
-        if (real.first != day.solution.first) error("Failed Real Part 1")
-        if (real.second != day.solution.second) error("Failed Real Part 2")
+        if (real.first != day.solution.first) error("Failed Real Part 1. Was ${real.first}")
+        if (real.second != day.solution.second) error("Failed Real Part 2. Was ${real.second}")
 
         DayTimings(
             day.day,

@@ -9,13 +9,12 @@ object Day13 : AdventOfCodeDay {
     override fun String.solve(): Pair<String, String> =
         parse()
             .run {
-                part2()//.print()
-                part1().size.toString() to ""
+                part1().size.toString() to part2().fullParse()
             }
 
     override val day = "13"
-    override val test = "17" to ""
-    override val solution = "770" to ""
+    override val test = "17" to "????????"
+    override val solution = "770" to "EPUELPBR"
 
 }
 
@@ -67,6 +66,70 @@ private fun applyFold(dots: Dots, fold: Fold): Dots =
             }
         }
     }.toSet()
+
+private fun Dots.fullParse(): String {
+    return (0 until 8).joinToString("") {
+        val xShift = 5*it
+        (0 until 6).map { y ->
+            (xShift until xShift+4).map { x ->
+                x to y in this
+            }
+
+        }.let(dotsToString::get) ?: "?"
+    }
+}
+
+//TODO: [AON] Do this smarter
+private val dotsToString = mapOf(
+    listOf(
+        listOf(true, true, true, true),
+        listOf(true, false, false, false),
+        listOf(true, true, true, false),
+        listOf(true, false, false, false),
+        listOf(true, false, false, false),
+        listOf(true, true, true, true)
+    ) to "E",
+    listOf(
+        listOf(true, true, true, false),
+        listOf(true, false, false, true),
+        listOf(true, false, false, true),
+        listOf(true, true, true, false),
+        listOf(true, false, false, false),
+        listOf(true, false, false, false)
+    ) to "P",
+    listOf(
+        listOf(true, false, false, true),
+        listOf(true, false, false, true),
+        listOf(true, false, false, true),
+        listOf(true, false, false, true),
+        listOf(true, false, false, true),
+        listOf(false, true, true, false)
+    ) to "U",
+    listOf(
+        listOf(true, false, false, false),
+        listOf(true, false, false, false),
+        listOf(true, false, false, false),
+        listOf(true, false, false, false),
+        listOf(true, false, false, false),
+        listOf(true, true, true, true)
+    ) to "L",
+    listOf(
+        listOf(true, true, true, false),
+        listOf(true, false, false, true),
+        listOf(true, true, true, false),
+        listOf(true, false, false, true),
+        listOf(true, false, false, true),
+        listOf(true, true, true, false)
+    ) to "B",
+    listOf(
+        listOf(true, true, true, false),
+        listOf(true, false, false, true),
+        listOf(true, false, false, true),
+        listOf(true, true, true, false),
+        listOf(true, false, true, false),
+        listOf(true, false, false, true)
+    ) to "R"
+)
 
 private fun Dots.print() =
     (0 .. maxOf { it.second }).forEach { y ->

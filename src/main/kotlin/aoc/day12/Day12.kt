@@ -43,30 +43,25 @@ private class RouteSolver(input: List<String>) {
 
     private val cache = HashMap<State, Int>()
 
-    private fun State.getRouteCount(): Int =
-        cache[this]
+    private val sizeCache = HashMap<String, Boolean>()
+    private fun String.isBig() = sizeCache[this] ?: all(Char::isUpperCase).also { sizeCache[this] = it }
+
+    private fun State.move(target: String) : State? =
+        when {
+            target.isBig() -> State(target, history + target, canRevisitSmall)
+            !history.contains(target) -> State(target, history + target, canRevisitSmall)
+            canRevisitSmall -> State(target, history + target, false)
+            else -> null
+        }
+
+    private fun State?.getRouteCount(): Int =
+        if (this == null) 0
+        else cache[this]
             ?: map[currentNode]!!.sumOf { target ->
-                when {
-                    target == "start" -> 0
-                    target == "end" -> 1
-                    target.all(Char::isUpperCase) -> copy(
-                        currentNode = target,
-                        history = history + target
-                    ).getRouteCount()
-                    target.all(Char::isLowerCase) -> if (history.contains(target)) {
-                        if (canRevisitSmall) {
-                            copy(
-                                currentNode = target,
-                                history = history + target,
-                                canRevisitSmall = false
-                            ).getRouteCount()
-                        } else {
-                            0
-                        }
-                    } else {
-                        copy(currentNode = target, history = history + target).getRouteCount()
-                    }
-                    else -> error("This shouldn't be possible!")
+                when (target) {
+                    "start" -> 0
+                    "end" -> 1
+                    else -> move(target).getRouteCount()
                 }
             }.also { cache[this] = it }
 

@@ -1,20 +1,15 @@
 package aoc.day12
 
 import aoc.AdventOfCodeDay
-import aoc.day12.CaveId.Companion.END
-import aoc.day12.CaveId.Companion.START
-import java.io.File
-import kotlin.math.max
 
 object Day12 : AdventOfCodeDay {
     override fun String.solve(): Pair<String, String> =
-        solve(0) to solve(1)
+        lines()
+            .let(::RouteSolver)
+            .run {
+                part1() to part2()
+            }
 
-    private fun String.solve(maxSmallRevisits: Int): String =
-        RouteSolver(this, maxSmallRevisits)
-            .getAllRoutes()
-            .size
-            .toString()
 
     override val day = "12"
     override val test = "226" to "3509"
@@ -22,90 +17,62 @@ object Day12 : AdventOfCodeDay {
 }
 
 
-fun day12() {
-    File("data/2021/real/12_01.txt")
-        .readText()
-        .let { RouteSolver(it, 1) }
-        .getAllRoutes()
-        .size
-        .let(::println)
-}
+private class RouteSolver(input: List<String>) {
 
-
-
-private data class CaveId(val value: String) {
-    companion object {
-        val START = CaveId("start")
-        val END = CaveId("end")
-    }
-}
-
-private class RouteSolver(input: String, private val maxSmallRevisits: Int) {
-
-    private abstract inner class CaveNode(val id: CaveId) {
-        protected val links = mutableSetOf<CaveNode>()
-        abstract fun headTowards(history: List<CaveNode>): List<List<CaveNode>>
-
-        fun linkTo(other: CaveNode) {
-            links.add(other)
-        }
-    }
-
-    private fun factoryNode(id: CaveId) =
-        when {
-            id == START -> StartNode()
-            id == END -> EndNode()
-            id.value.all(Char::isUpperCase) -> BigNode(id)
-            id.value.all(Char::isLowerCase) -> SmallNode(id)
-            else -> error("Invalid CaveId[${id.value}]")
+    private val map: Map<String, Set<String>> = HashMap<String, MutableSet<String>>()
+        .also { map ->
+            input
+                .map { it.split("-") }
+                .also {
+                    it.flatten().toSet().forEach { here ->
+                        map[here] = mutableSetOf()
+                    }
+                }
+                .forEach { (here, there) ->
+                    map[here]!!.add(there)
+                    map[there]!!.add(here)
+                }
         }
 
-    private inner class StartNode: CaveNode(START) {
-        fun start(): List<List<CaveNode>> = links.flatMap { it.headTowards(listOf(this)) }
-        override fun headTowards(history: List<CaveNode>): List<List<CaveNode>> = emptyList()
-    }
 
-    private inner class BigNode(id: CaveId): CaveNode(id) {
-        override fun headTowards(history: List<CaveNode>): List<List<CaveNode>> = links.flatMap { it.headTowards(history + this) }
-    }
+    private data class State(
+        val currentNode: String,
+        val history: Set<String>,
+        val canRevisitSmall: Boolean
+    )
 
-    private inner class SmallNode(id: CaveId): CaveNode(id) {
-        override fun headTowards(history: List<CaveNode>) =
-            if (history.smallRevisits >= maxSmallRevisits && history.contains(this)) emptyList()
-            else links.flatMap { it.headTowards(history + this) }
-    }
+    private val cache = HashMap<State, Int>()
 
-    private inner class EndNode: CaveNode(END) {
-        override fun headTowards(history: List<CaveNode>) = listOf(history)
-    }
+    private fun State.getRouteCount(): Int =
+        cache[this]
+            ?: map[currentNode]!!.sumOf { target ->
+                when {
+                    target == "start" -> 0
+                    target == "end" -> 1
+                    target.all(Char::isUpperCase) -> copy(
+                        currentNode = target,
+                        history = history + target
+                    ).getRouteCount()
+                    target.all(Char::isLowerCase) -> if (history.contains(target)) {
+                        if (canRevisitSmall) {
+                            copy(
+                                currentNode = target,
+                                history = history + target,
+                                canRevisitSmall = false
+                            ).getRouteCount()
+                        } else {
+                            0
+                        }
+                    } else {
+                        copy(currentNode = target, history = history + target).getRouteCount()
+                    }
+                    else -> error("This shouldn't be possible!")
+                }
+            }.also { cache[this] = it }
 
-    private val start: StartNode
+    fun newSolve(canRevisitSmall: Boolean) = State("start", emptySet(), canRevisitSmall).getRouteCount()
 
-    private val List<CaveNode>.smallRevisits get() =
-        filterIsInstance<SmallNode>().run {
-            size - distinct().size
-        }
-
-    init {
-        val links = input.split("\n").map {
-            val split = it.split("-")
-            CaveId(split[0]) to CaveId(split[1])
-        }
-
-        val nodes = links.flatMap(Pair<CaveId, CaveId>::toList).toSet().associateWith(::factoryNode)
-
-        fun get(id: CaveId): CaveNode = nodes[id]!!
-
-        links.forEach { (fromId, toId) ->
-            val from = get(fromId)
-            val to = get(toId)
-            from.linkTo(to)
-            to.linkTo(from)
-        }
-
-        start = get(START) as StartNode
-    }
-
-    fun getAllRoutes(): List<List<CaveId>> = start.start().map { it.map(CaveNode::id) }
+    fun part1(): String = newSolve(false).toString()
+    fun part2(): String = newSolve(true).toString()
 }
 

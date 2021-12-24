@@ -22,6 +22,7 @@ import aoc.day19.Day19
 import aoc.day20.Day20
 import aoc.day21.Day21
 import aoc.day22.Day22
+import aoc.day23.Day23
 import java.io.File
 import java.time.Duration
 import java.time.Instant
@@ -49,7 +50,8 @@ fun allDays(): Sequence<AdventOfCodeDay> =
         Day19,
         Day20,
         Day21,
-        Day22
+        Day22,
+        Day23
     )
 
 fun main() {
